@@ -101,6 +101,14 @@ try {
   await c.getByText('Bienvenue à tous').waitFor();
   assert(c.url().endsWith('#/accueil'), 'a share link opens the screen without any server');
 
+  // Playlist: device A rotates through the static screens.
+  await control.fill('#tag', 'hall');
+  await control.fill('#playlist-seconds', '2');
+  await control.click('#playlist-start');
+  await a.waitForURL(/#\/tableaux\/ventes$/, { timeout: 8000 });
+  await control.click('#playlist-stop');
+  assert(true, 'a playlist command rotates screens on the device');
+
   if (shots) {
     await control.screenshot({ path: 'docs/assets/control.png' });
     await a.screenshot({ path: 'docs/assets/device-hall.png' });

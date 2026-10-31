@@ -1,4 +1,4 @@
-import { createScreenDevice, createScreenRouter, createScreenStore, decodeScreen, hashRouter, persistentDeviceId, webStorage } from 'multi-screen';
+import { createPlaylist, createScreenDevice, createScreenRouter, createScreenStore, decodeScreen, hashRouter, persistentDeviceId, webStorage, type PlaylistItem } from 'multi-screen';
 import { createScreenOutlet } from 'multi-screen/dockview';
 import { createDemoRegistry, transportFromUrl } from './shared';
 
@@ -48,4 +48,14 @@ createScreenOutlet(document.getElementById('device')!, {
     // Fullscreen needs a gesture: the next tap retries it.
     if (feature === 'fullscreen') addEventListener('pointerdown', () => void document.documentElement.requestFullscreen?.().catch(() => undefined), { once: true });
   },
+});
+
+// Application command sent by the control page: rotate through screens.
+const playlist = createPlaylist({ router, items: [], autoStart: false });
+device.subscribe((event) => {
+  if (event.type !== 'custom' || event.name !== 'playlist') return;
+  const items = Array.isArray(event.data) ? (event.data as PlaylistItem[]).filter((i) => typeof i?.screenId === 'string' && Number(i.durationMs) > 0) : [];
+  playlist.setItems(items);
+  if (items.length) playlist.play();
+  else playlist.pause();
 });

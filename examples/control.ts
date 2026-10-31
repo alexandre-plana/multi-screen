@@ -215,3 +215,18 @@ $('navigate').onclick = async () => {
   const path = $<HTMLInputElement>('path').value.trim();
   if (to && path.startsWith('/')) report('Navigation', await hub.navigate(to, path));
 };
+
+// ---- Playlist (application command) ---------------------------------------
+$('playlist-start').onclick = async () => {
+  const to = target();
+  if (!to) return;
+  const seconds = Math.max(2, $<HTMLInputElement>('playlist-seconds').valueAsNumber || 8);
+  const screens = store.list().filter((s) => !s.route?.includes(':'));
+  // Devices must hold the screens before rotating through them.
+  for (const screen of screens) await hub.show(to, screen, { navigate: false });
+  report('Playlist', await hub.command(to, 'playlist', screens.map((s) => ({ screenId: s.id, durationMs: seconds * 1000 }))));
+};
+$('playlist-stop').onclick = async () => {
+  const to = target();
+  if (to) report('Playlist', await hub.command(to, 'playlist', []));
+};
