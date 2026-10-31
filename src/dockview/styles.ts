@@ -86,3 +86,65 @@ export function injectEditorStyles(doc: Document = document): void {
   style.textContent = EDITOR_CSS;
   doc.head.append(style);
 }
+
+/** Styles of the screen manager (`--msm-*` variables, light and dark). */
+export const MANAGER_CSS = `
+.msm{--msm-bg:#f6f7f9;--msm-fg:#1b1f24;--msm-muted:#5d6673;--msm-card:#fff;--msm-line:#d9dde3;--msm-accent:#2f6fde;--msm-danger:#c0392b;--msm-live:#1f8a4c;
+background:var(--msm-bg);color:var(--msm-fg);font:14px/1.45 system-ui,-apple-system,'Segoe UI',sans-serif;padding:16px;min-height:100%;box-sizing:border-box}
+@media (prefers-color-scheme:dark){.msm{--msm-bg:#111418;--msm-fg:#e8eaee;--msm-muted:#9aa3ae;--msm-card:#1a1e24;--msm-line:#2c323b;--msm-accent:#6a9cff;--msm-danger:#ff7a6b;--msm-live:#4cc27f}}
+.msm *{box-sizing:border-box}
+.msm-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.msm-heading{font-size:18px;margin:0}
+.msm-count{background:var(--msm-line);border-radius:999px;padding:0 8px;font-size:12px;font-variant-numeric:tabular-nums}
+.msm-spacer{flex:1}
+.msm-search{flex:0 1 320px;min-width:160px}
+.msm-search,.msm-sort{font:inherit;color:inherit;background:var(--msm-card);border:1px solid var(--msm-line);border-radius:6px;padding:6px 10px}
+.msm-btn,.msm-link{font:inherit;color:inherit;background:var(--msm-card);border:1px solid var(--msm-line);border-radius:6px;padding:5px 10px;cursor:pointer;list-style:none;white-space:nowrap}
+.msm-btn::-webkit-details-marker{display:none}
+.msm-btn:disabled{opacity:.5;cursor:default}
+.msm-primary{background:var(--msm-accent);border-color:var(--msm-accent);color:#fff}
+.msm-danger{color:var(--msm-danger)}
+.msm-link{border:0;background:none;text-align:left;width:100%;border-radius:4px}
+.msm-link:hover{background:var(--msm-bg)}
+.msm-bulk{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:6px;color:var(--msm-muted);font-size:13px}
+.msm-bulk[hidden]{display:none}
+.msm-check{display:flex;gap:6px;align-items:center}
+.msm-status{min-height:1.4em;margin:0 0 8px;color:var(--msm-muted);font-size:13px}
+.msm-grid{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.msm-card{display:flex;flex-direction:column;background:var(--msm-card);border:1px solid var(--msm-line);border-radius:10px;overflow:visible;transition:box-shadow .2s}
+.msm-card[hidden]{display:none}
+.msm-card.msm-selected{border-color:var(--msm-accent);box-shadow:0 0 0 1px var(--msm-accent)}
+.msm-card.msm-flash{box-shadow:0 0 0 3px var(--msm-accent)}
+.msm-thumb-wrap{position:relative;border-bottom:1px solid var(--msm-line);background:#000;border-radius:10px 10px 0 0;overflow:hidden}
+.msm-thumb{position:relative;width:100%;max-height:220px;margin:0 auto;pointer-events:auto}
+.msm-thumb .ms-root{pointer-events:none}
+.msm-thumb.msm-clickable{cursor:pointer}
+.msm-select{position:absolute;top:8px;left:8px;width:18px;height:18px;margin:0;accent-color:var(--msm-accent)}
+.msm-body{padding:10px 12px 4px;display:grid;gap:2px;min-width:0}
+.msm-title{font-size:15px;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.msm-route{font:12px ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--msm-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.msm-meta,.msm-devices{margin:0;font-size:12px;color:var(--msm-muted)}
+.msm-devices.msm-live{color:var(--msm-live)}
+.msm-devices.msm-live::before{content:'';display:inline-block;width:7px;height:7px;border-radius:50%;background:currentColor;margin-right:6px;vertical-align:1px}
+.msm-actions{display:flex;gap:6px;padding:8px 12px 12px;margin-top:auto;align-items:flex-start}
+.msm-menu{position:relative}
+.msm-menu[open]>summary{border-color:var(--msm-accent)}
+.msm-menu-panel{position:absolute;z-index:20;top:calc(100% + 4px);left:0;min-width:200px;display:grid;gap:6px;padding:10px;background:var(--msm-card);border:1px solid var(--msm-line);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.15)}
+.msm-menu-right{left:auto;right:0}
+.msm-menu-title{margin:0;font-size:12px;color:var(--msm-muted)}
+.msm-muted{margin:0;color:var(--msm-muted);font-size:13px}
+.msm-empty{color:var(--msm-muted);padding:24px 0;text-align:center}
+.msm-empty[hidden]{display:none}
+.msm :focus-visible{outline:2px solid var(--msm-accent);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){.msm-card{transition:none}}
+`;
+
+/** Injects the manager stylesheet once per document. */
+export function injectManagerStyles(doc: Document = document): void {
+  injectStyles(doc);
+  if (doc.getElementById('multi-screen-manager-styles')) return;
+  const style = doc.createElement('style');
+  style.id = 'multi-screen-manager-styles';
+  style.textContent = MANAGER_CSS;
+  doc.head.append(style);
+}

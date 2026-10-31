@@ -19,6 +19,7 @@ multi-screen décrit un écran comme une **donnée JSON** : un ensemble de panne
 | **Partage** | `ScreenHub` (régie) ↔ `ScreenDevice` (écran) : envoyer, mettre à jour par patch, retirer, naviguer, thème, affichage, identification, commandes libres. Accusés de réception, ciblage par id, par étiquette (`tag:hall`) ou global. |
 | **Transports** | BroadcastChannel (même navigateur), WebSocket (réseau, avec relais fourni), postMessage (iframes, popups), mémoire (tests), et une enveloppe de signature HMAC. Une interface de deux méthodes pour en écrire d'autres (WebRTC, MQTT, SSE…). |
 | **Éditeur** | `createScreenEditor` : créer des écrans, y déposer des panneaux prédéfinis depuis une palette, les ordonner sur un canevas, régler leurs paramètres, le thème et l'affichage. |
+| **Gestion des écrans** | `createScreenManager` : tous les écrans créés en miniatures vivantes, recherche, tri, appareils qui les affichent, diffusion, duplication, lien, import/export JSON, suppression unitaire ou groupée. |
 | **Playlists** | Rotation d'écrans pour l'affichage dynamique, pilotable à distance. |
 | **Liens** | `createShareUrl(screen)` met l'écran entier dans l'URL (compressé, dans le fragment) : un QR code suffit, sans serveur. |
 | **Affichage** | Résolution virtuelle ajustée à l'écran, rotation 90/180/270°, zoom, onglets masqués, mise en page verrouillée, curseur caché, plein écran, écran maintenu allumé. |
@@ -152,6 +153,28 @@ registry.register('compteur', ({ element, params, api }) => {
 - **Web Components** : `registry.register('carte', elementPanel('ma-carte', { allow: ['ville', 'zoom'] }))` — les paramètres autorisés deviennent des propriétés de l'élément. Sans `allow`, une liste d'exclusion écarte `innerHTML`, `on*`, `src`, `href`, etc. ; préférez `allow`, les paramètres venant du réseau.
 - **Intégrés**, utilisables sans livrer de code à l'appareil : `ms:text`, `ms:image`, `ms:iframe` (bac à sable par défaut), `ms:clock`, `ms:color`.
 - Un composant inconnu affiche un message explicite (personnalisable avec `registry.setFallback`).
+
+### La gestion des écrans
+
+![Le gestionnaire : tous les écrans créés](docs/assets/manager.png)
+
+```ts
+import { createScreenManager, managerLabelsFr } from 'multi-screen/dockview';
+
+createScreenManager(document.getElementById('ecrans')!, {
+  store: hub.store,      // la bibliothèque
+  registry,              // pour les miniatures (facultatif)
+  hub,                   // diffusion et « affiché sur … » (facultatif)
+  onEdit: (id) => location.assign(`/editeur?screen=${id}`),
+  shareBaseUrl: 'https://ecrans.example.com/device.html',
+  labels: managerLabelsFr,
+});
+```
+
+- **Vue d'ensemble** : une carte par écran, avec sa miniature rendue comme sur un appareil (résolution virtuelle, thème) et chargée à l'approche de l'écran, son titre, sa route, sa version, son nombre de panneaux, son thème et sa date de modification. Tout se met à jour en direct.
+- **Appareils** : chaque carte indique les appareils qui affichent l'écran.
+- **Actions** : éditer (rappel `onEdit`), diffuser vers tous les appareils ou ceux que l'on coche, dupliquer, copier un lien de partage, exporter en JSON, supprimer avec confirmation. Un écran supprimé est aussi retiré des appareils qui le détiennent.
+- **En masse** : recherche (titre, identifiant, route), tri (date, titre, identifiant), sélection multiple pour exporter ou supprimer, import de fichiers JSON (un écran ou une liste, validés ; un identifiant existant n'est jamais écrasé).
 
 ### L'éditeur d'écrans
 

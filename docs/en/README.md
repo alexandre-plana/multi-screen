@@ -65,6 +65,7 @@ await hub.identify('*');
 - **Two-level theme and display** — the screen carries defaults, each device can receive overrides.
 - **Transports** — BroadcastChannel, WebSocket (with relay), postMessage, in-memory, plus `signedTransport` (HMAC-SHA256, replay protection). Any `{ send, subscribe }` object works.
 - **Screen editor** — `createScreenEditor(element, { registry, store })`: screen library, a palette of predefined panels dragged onto a dockview canvas to arrange them, an inspector for panel params and screen settings, save with the exact layout. English labels by default, `editorLabelsFr` provided.
+- **Screen manager** — `createScreenManager(element, { store, registry?, hub?, onEdit? })`: every created screen as a live thumbnail, search and sort, which devices show it, send to chosen devices, duplicate, share link, JSON import/export, single or bulk delete.
 - **Share links** — `createShareUrl(screen, { baseUrl })` puts the whole screen in the URL fragment, compressed.
 - **Acknowledgements** — every command resolves with the devices expected, their acks and the silent ones.
 

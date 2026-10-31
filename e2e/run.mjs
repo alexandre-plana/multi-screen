@@ -141,6 +141,46 @@ try {
   assert((await a.locator('[data-component="demo:kpi"]').count()) === 1, 'the composed screen is shown on the devices');
   if (shots) await editorPage.screenshot({ path: 'docs/assets/editor.png' });
 
+  // Manager: every created screen, with thumbnails, devices, and actions.
+  const managerPage = await context.newPage();
+  await managerPage.setViewportSize({ width: 1280, height: 860 });
+  await managerPage.goto(`${base}/manager.html`);
+  const composed = managerPage.locator('.msm-card', { hasText: 'Écran composé' });
+  await composed.waitFor();
+  assert((await managerPage.locator('.msm-card').count()) === 4, 'the manager lists every created screen');
+  await composed.locator('.msm-thumb', { hasText: 'Composé dans l’éditeur' }).waitFor();
+  assert(true, 'each card shows a live thumbnail of its screen');
+  await composed.locator('.msm-devices', { hasText: 'Hall' }).waitFor();
+  assert(true, 'cards show which devices display the screen');
+  await managerPage.fill('.msm-search', 'ventes');
+  assert((await managerPage.locator('.msm-card:visible').count()) === 1, 'search filters the screens');
+  await managerPage.fill('.msm-search', '');
+  // Send "Tableau des ventes" to device B only.
+  const sales = managerPage.locator('.msm-card', { hasText: 'Tableau des ventes' });
+  await sales.locator('summary', { hasText: 'Diffuser' }).click();
+  await sales.getByLabel('Tous les appareils').uncheck();
+  await sales.getByLabel('Bureau').check();
+  await sales.getByRole('button', { name: 'Envoyer' }).click();
+  await managerPage.locator('.msm-status', { hasText: 'Envoyé à 1 appareil' }).waitFor();
+  await b.waitForURL(/#\/tableaux\/ventes$/);
+  assert(true, 'a screen is sent from its card to a chosen device');
+  // Duplicate, then delete the copy (two-step confirmation).
+  await composed.locator('summary[aria-label]').click();
+  await composed.getByRole('button', { name: 'Dupliquer' }).click();
+  const copy = managerPage.locator('.msm-card', { hasText: 'Écran composé (2)' });
+  await copy.waitFor();
+  await copy.locator('summary[aria-label]').click();
+  await copy.getByRole('button', { name: 'Supprimer' }).click();
+  await copy.getByRole('button', { name: 'Confirmer ?' }).click();
+  await copy.waitFor({ state: 'detached' });
+  assert(true, 'duplicate and delete with confirmation');
+  if (shots) await managerPage.screenshot({ path: 'docs/assets/manager.png' });
+  // Edit opens the editor on that screen.
+  await sales.getByRole('button', { name: 'Éditer' }).click();
+  await managerPage.waitForURL(/editor\.html\?screen=ventes/);
+  await managerPage.locator('.mse-title').waitFor();
+  assert((await managerPage.inputValue('.mse-title')) === 'Tableau des ventes', '"Edit" opens the screen in the editor');
+
   if (shots) {
     await control.screenshot({ path: 'docs/assets/control.png' });
     await a.screenshot({ path: 'docs/assets/device-hall.png' });
