@@ -64,6 +64,7 @@ await hub.identify('*');
 - **Panels** — plain functions `({ element, params, api }) => ({ update, dispose })`, React components (`reactPanel`), or custom elements (`elementPanel`: Lit, Vue, Svelte, Angular Elements). Built-ins usable without shipping code: `ms:text`, `ms:image`, `ms:iframe`, `ms:clock`, `ms:color`.
 - **Two-level theme and display** — the screen carries defaults, each device can receive overrides.
 - **Transports** — BroadcastChannel, WebSocket (with relay), postMessage, in-memory, plus `signedTransport` (HMAC-SHA256, replay protection). Any `{ send, subscribe }` object works.
+- **Screen editor** — `createScreenEditor(element, { registry, store })`: screen library, a palette of predefined panels dragged onto a dockview canvas to arrange them, an inspector for panel params and screen settings, save with the exact layout. English labels by default, `editorLabelsFr` provided.
 - **Share links** — `createShareUrl(screen, { baseUrl })` puts the whole screen in the URL fragment, compressed.
 - **Acknowledgements** — every command resolves with the devices expected, their acks and the silent ones.
 

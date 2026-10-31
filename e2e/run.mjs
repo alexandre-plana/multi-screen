@@ -109,6 +109,38 @@ try {
   await control.click('#playlist-stop');
   assert(true, 'a playlist command rotates screens on the device');
 
+  // Editor: create a screen by dropping predefined panels on the canvas.
+  const editorPage = await context.newPage();
+  await editorPage.setViewportSize({ width: 1280, height: 760 });
+  await editorPage.goto(`${base}/editor.html`);
+  await editorPage.getByRole('button', { name: '+ Nouvel écran' }).click();
+  await editorPage.fill('.mse-title', 'Écran composé');
+  const canvas = editorPage.locator('.mse-canvas');
+  await editorPage.locator('[data-component="ms:text"]').dragTo(canvas);
+  await editorPage.locator('.mse-canvas .dv-groupview').first().waitFor();
+  assert((await editorPage.evaluate(() => window.editor.view.api.panels.length)) === 1, 'dragging a palette panel onto the empty canvas adds it');
+  const group = editorPage.locator('.mse-canvas .dv-groupview').first();
+  const box = await group.boundingBox();
+  await editorPage.locator('[data-component="demo:kpi"]').dragTo(group, { targetPosition: { x: box.width - 12, y: box.height / 2 } });
+  await editorPage.locator('[data-component="ms:clock"]').dragTo(group, { targetPosition: { x: box.width / 4, y: box.height - 12 } });
+  const layout = await editorPage.evaluate(() => ({ panels: window.editor.view.api.panels.length, groups: window.editor.view.api.groups.length }));
+  assert(layout.panels === 3 && layout.groups === 3, `dropping on a group edge splits it (${layout.panels} panels, ${layout.groups} groups)`);
+  // Edit the text panel's parameters in the inspector.
+  await editorPage.locator('.mse-canvas .dv-tab', { hasText: 'Texte' }).click();
+  const textField = editorPage.locator('.mse-inspector .mse-field', { hasText: 'text' }).locator('textarea');
+  await textField.fill('Composé dans l’éditeur');
+  await textField.blur();
+  await editorPage.locator('.mse-canvas', { hasText: 'Composé dans l’éditeur' }).waitFor();
+  await editorPage.keyboard.press('Control+s');
+  await editorPage.locator('.mse-status[data-state="clean"]').waitFor();
+  // The control page (another tab) sees the new screen, and sends it to device A.
+  await control.locator('#screen option', { hasText: 'Écran composé' }).waitFor({ state: 'attached' });
+  assert(true, 'the saved screen appears in the control page library (cross-tab sync)');
+  await editorPage.getByRole('button', { name: 'Envoyer à tous les écrans' }).click();
+  await a.getByText('Composé dans l’éditeur').waitFor();
+  assert((await a.locator('[data-component="demo:kpi"]').count()) === 1, 'the composed screen is shown on the devices');
+  if (shots) await editorPage.screenshot({ path: 'docs/assets/editor.png' });
+
   if (shots) {
     await control.screenshot({ path: 'docs/assets/control.png' });
     await a.screenshot({ path: 'docs/assets/device-hall.png' });

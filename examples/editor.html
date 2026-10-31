@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Éditeur · multi-screen</title>
+    <link rel="stylesheet" href="./demo.css" />
+    <style>
+      body { display: grid; grid-template-rows: auto 1fr; }
+      .topbar { display: flex; gap: 12px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--line); }
+      .topbar h1 { font-size: 16px; margin: 0; }
+      .topbar nav { display: flex; gap: 12px; font-size: 13px; }
+      #editor { min-height: 0; }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <h1>Éditeur d’écrans</h1>
+      <nav aria-label="Démo"><a href="./control.html">Régie</a><a href="./index.html">Accueil</a></nav>
+      <span class="transport" id="transport" style="color:var(--muted);font-size:12px;margin-left:auto"></span>
+    </header>
+    <main id="editor"></main>
+    <script type="module" src="./editor.ts"></script>
+  </body>
+</html>

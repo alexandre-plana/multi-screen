@@ -17,7 +17,7 @@ export default defineConfig({
     outDir: here('dist'),
     emptyOutDir: true,
     rollupOptions: {
-      input: { index: here('index.html'), control: here('control.html'), device: here('device.html') },
+      input: { index: here('index.html'), control: here('control.html'), device: here('device.html'), editor: here('editor.html') },
     },
   },
 });

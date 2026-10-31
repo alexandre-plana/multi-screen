@@ -12,6 +12,11 @@ export type ScreenStoreEvent =
 export interface ScreenStorage {
   load(): ScreenDefinition[] | undefined | Promise<ScreenDefinition[] | undefined>;
   save(screens: ScreenDefinition[]): void | Promise<void>;
+  /**
+   * Optional: reports changes made by someone else (another tab, a server
+   * push). The store merges them without saving them back.
+   */
+  subscribe?(listener: (screens: ScreenDefinition[]) => void): () => void;
 }
 
 export interface ScreenStoreOptions {
@@ -53,6 +58,38 @@ export class ScreenStore {
     this.#now = options.now ?? (() => new Date());
     for (const screen of options.screens ?? []) this.#screens.set(screen.id, this.#stamp(validateScreen(screen), undefined, 'keep'));
     this.ready = this.#load();
+    this.#unwatch = this.#storage?.subscribe?.((screens) => this.#merge(screens));
+  }
+
+  readonly #unwatch: (() => void) | undefined;
+
+  /** Applies an external snapshot: emits put/remove for what changed, never saves. */
+  #merge(screens: ScreenDefinition[]): void {
+    const incoming = new Map<string, ScreenDefinition>();
+    for (const raw of screens) {
+      try {
+        const screen = validateScreen(raw);
+        incoming.set(screen.id, screen);
+      } catch {
+        // Ignore corrupted entries.
+      }
+    }
+    for (const [id, screen] of incoming) {
+      const previous = this.#screens.get(id);
+      if (previous && previous.version === screen.version && deepEqual(previous, screen)) continue;
+      this.#screens.set(id, structuredClone(screen));
+      this.#events.emit({ type: 'put', screen: structuredClone(screen), ...(previous ? { previous: structuredClone(previous) } : {}) });
+    }
+    for (const [id, screen] of [...this.#screens]) {
+      if (incoming.has(id)) continue;
+      this.#screens.delete(id);
+      this.#events.emit({ type: 'remove', screen: structuredClone(screen) });
+    }
+  }
+
+  /** Stops watching the storage. */
+  dispose(): void {
+    this.#unwatch?.();
   }
 
   async #load(): Promise<void> {
@@ -181,6 +218,22 @@ export function webStorage(key = 'multi-screen:screens', storage?: Storage): Scr
     },
     save(screens) {
       target()?.setItem(key, JSON.stringify(screens));
+    },
+    subscribe(listener) {
+      const win = globalThis as unknown as Pick<Window, 'addEventListener' | 'removeEventListener'>;
+      if (typeof win.addEventListener !== 'function') return () => undefined;
+      // `storage` fires in the *other* tabs of the same origin.
+      const onStorage = (event: StorageEvent) => {
+        if (event.key !== key || (storage && event.storageArea !== storage)) return;
+        try {
+          const parsed = event.newValue ? (JSON.parse(event.newValue) as unknown) : [];
+          if (Array.isArray(parsed)) listener(parsed as ScreenDefinition[]);
+        } catch {
+          // Ignore unreadable values.
+        }
+      };
+      win.addEventListener('storage', onStorage);
+      return () => win.removeEventListener('storage', onStorage);
     },
   };
 }

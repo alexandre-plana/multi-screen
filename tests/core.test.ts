@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   ValidationError, applyMergePatch, computeStage, createMergePatch, createScreenStore, decodeScreen, encodeScreen,
   mergeDisplay, mergeTheme, validateScreen, type ScreenDefinition, type ScreenStorage,
@@ -144,5 +144,20 @@ describe('share links', () => {
     await expect(decodeScreen('j.!!!')).rejects.toBeInstanceOf(ValidationError);
     await expect(decodeScreen('x.abc')).rejects.toBeInstanceOf(ValidationError);
     await expect(decodeScreen(`j.${btoa('{"id":""}')}`)).rejects.toBeInstanceOf(ValidationError);
+  });
+});
+
+describe('external storage changes', () => {
+  it('merges snapshots pushed by the storage without saving them back', () => {
+    let push!: (screens: ScreenDefinition[]) => void;
+    const save = vi.fn();
+    const store = createScreenStore({ screens: [lobby, { id: 'gone' }], storage: { load: () => undefined, save, subscribe: (l) => ((push = l), () => undefined) } });
+    const events: string[] = [];
+    store.subscribe((e) => events.push(`${e.type}:${'screen' in e ? e.screen.id : ''}`));
+    push([{ ...lobby, title: 'Other tab', version: 5 }, { id: 'new', version: 1 }]);
+    expect(store.get('lobby')).toMatchObject({ title: 'Other tab', version: 5 });
+    expect(store.has('gone')).toBe(false);
+    expect(events).toEqual(['put:lobby', 'put:new', 'remove:gone']);
+    expect(save).not.toHaveBeenCalled();
   });
 });

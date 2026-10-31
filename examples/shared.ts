@@ -1,6 +1,6 @@
 import 'dockview/dist/styles/dockview.css';
 import { broadcastChannelTransport, webSocketTransport, type ScreenDefinition, type Transport } from 'multi-screen';
-import { createPanelRegistry, registerBuiltinPanels, type PanelFactory } from 'multi-screen/dockview';
+import { builtinPanelLabelsFr, createPanelRegistry, registerBuiltinPanels, type PanelFactory } from 'multi-screen/dockview';
 
 /**
  * Transport chosen from the URL: `?relay=ws://localhost:8787` goes through
@@ -70,9 +70,9 @@ const bars: PanelFactory<{ title?: string; values?: number[]; labels?: string[] 
 };
 
 export function createDemoRegistry() {
-  return registerBuiltinPanels(createPanelRegistry())
-    .register('demo:kpi', kpi, { label: 'Indicateur' })
-    .register('demo:bars', bars, { label: 'Histogramme' });
+  return registerBuiltinPanels(createPanelRegistry(), { labels: builtinPanelLabelsFr })
+    .register('demo:kpi', kpi, { label: 'Indicateur', defaults: { label: 'Indicateur', value: 1200, unit: '€', trend: 3.5 } })
+    .register('demo:bars', bars, { label: 'Histogramme', defaults: { title: 'Histogramme', values: [4, 8, 6, 10, 7], labels: ['L', 'M', 'M', 'J', 'V'] } });
 }
 
 export const presets: ScreenDefinition[] = [

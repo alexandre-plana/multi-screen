@@ -18,6 +18,7 @@ multi-screen décrit un écran comme une **donnée JSON** : un ensemble de panne
 | **Routes dynamiques** | `ScreenRouter` ajoute, remplace et retire des routes pendant l'exécution (`/hall/:zone`, `/mur{/:index}`…). Il s'appuie sur [`history`](https://github.com/remix-run/history) et [`path-to-regexp`](https://github.com/pillarjs/path-to-regexp), et accepte n'importe quel autre routeur par un adaptateur de trois méthodes. |
 | **Partage** | `ScreenHub` (régie) ↔ `ScreenDevice` (écran) : envoyer, mettre à jour par patch, retirer, naviguer, thème, affichage, identification, commandes libres. Accusés de réception, ciblage par id, par étiquette (`tag:hall`) ou global. |
 | **Transports** | BroadcastChannel (même navigateur), WebSocket (réseau, avec relais fourni), postMessage (iframes, popups), mémoire (tests), et une enveloppe de signature HMAC. Une interface de deux méthodes pour en écrire d'autres (WebRTC, MQTT, SSE…). |
+| **Éditeur** | `createScreenEditor` : créer des écrans, y déposer des panneaux prédéfinis depuis une palette, les ordonner sur un canevas, régler leurs paramètres, le thème et l'affichage. |
 | **Playlists** | Rotation d'écrans pour l'affichage dynamique, pilotable à distance. |
 | **Liens** | `createShareUrl(screen)` met l'écran entier dans l'URL (compressé, dans le fragment) : un QR code suffit, sans serveur. |
 | **Affichage** | Résolution virtuelle ajustée à l'écran, rotation 90/180/270°, zoom, onglets masqués, mise en page verrouillée, curseur caché, plein écran, écran maintenu allumé. |
@@ -151,6 +152,30 @@ registry.register('compteur', ({ element, params, api }) => {
 - **Web Components** : `registry.register('carte', elementPanel('ma-carte', { allow: ['ville', 'zoom'] }))` — les paramètres autorisés deviennent des propriétés de l'élément. Sans `allow`, une liste d'exclusion écarte `innerHTML`, `on*`, `src`, `href`, etc. ; préférez `allow`, les paramètres venant du réseau.
 - **Intégrés**, utilisables sans livrer de code à l'appareil : `ms:text`, `ms:image`, `ms:iframe` (bac à sable par défaut), `ms:clock`, `ms:color`.
 - Un composant inconnu affiche un message explicite (personnalisable avec `registry.setFallback`).
+
+### L'éditeur d'écrans
+
+![L'éditeur : palette, canevas et inspecteur](docs/assets/editor.png)
+
+```ts
+import { builtinPanelLabelsFr, createScreenEditor, editorLabelsFr, registerBuiltinPanels } from 'multi-screen/dockview';
+
+const editor = createScreenEditor(document.getElementById('editeur')!, {
+  registry,                     // la palette = les composants enregistrés (ou `palette: ['ms:text', 'meteo']`)
+  store: hub.store,             // la bibliothèque d'écrans
+  labels: editorLabelsFr,       // textes en anglais par défaut
+  actions: [{ label: 'Diffuser', run: (screen) => hub.show('*', screen) }],
+});
+```
+
+- **Écrans** : création, duplication, suppression (avec confirmation), renommage.
+- **Palette** : chaque composant du registre, avec son `label`. On le **glisse sur le canevas** (au centre d'un groupe pour un onglet, sur un bord pour le diviser), ou on clique pour l'ajouter à côté du panneau actif (accessible au clavier).
+- **Canevas** : la disposition dockview elle-même. On y déplace les onglets, on redimensionne, on réorganise ; le canevas montre le thème et la résolution virtuelle de l'écran. Les réglages propres aux appareils (verrouillage, onglets masqués, curseur, rotation) ne s'y appliquent pas pour ne pas gêner l'édition.
+- **Inspecteur** : titre et paramètres du panneau sélectionné, avec des champs générés à partir des `defaults` déclarés au registre (texte, nombre, case, couleur) et un éditeur JSON pour le reste ; route, thème, résolution et réglages d'affichage de l'écran.
+- **Enregistrement** : bouton, Ctrl/Cmd+S ou `autoSaveMs`. L'écran est enregistré avec sa disposition exacte (`layout`). Un écran modifié ailleurs est rechargé s'il n'y a pas de modifications en cours.
+- Les couleurs de l'éditeur sont des variables CSS (`--mse-accent`, `--mse-bg`…), avec un mode sombre.
+
+Pour que la palette soit utile, déclarez libellés et valeurs par défaut à l'enregistrement : `registry.register('meteo', meteo, { label: 'Météo', defaults: { ville: 'Lyon' } })`. Le store `webStorage` se synchronise entre onglets : un écran enregistré dans l'éditeur apparaît aussitôt dans la régie.
 
 ### Les routes dynamiques
 

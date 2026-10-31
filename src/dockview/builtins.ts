@@ -66,7 +66,7 @@ export const clockPanel: PanelFactory<{ timeZone?: string; locale?: string; seco
     box.dateTime = now.toISOString();
     box.style.fontSize = current.size ?? '3em';
     try {
-      box.textContent = now.toLocaleTimeString(current.locale, {
+      box.textContent = now.toLocaleTimeString(current.locale || undefined, {
         hour: '2-digit', minute: '2-digit', ...(current.seconds === false ? {} : { second: '2-digit' }),
         ...(current.timeZone ? { timeZone: current.timeZone } : {}),
       });
@@ -102,9 +102,31 @@ export const builtinPanels = {
   'ms:color': colorPanel,
 } as const;
 
+/** Labels and default params of the built-in panels (used by palettes and editors). */
+export const builtinPanelOptions: Record<keyof typeof builtinPanels, { label: string; defaults: Record<string, unknown> }> = {
+  'ms:text': { label: 'Text', defaults: { text: 'Text', size: '2em', align: 'center', color: '', background: '' } },
+  'ms:image': { label: 'Image', defaults: { src: '', alt: '', fit: 'contain' } },
+  'ms:iframe': { label: 'Web page', defaults: { src: 'https://example.com', title: '' } },
+  'ms:clock': { label: 'Clock', defaults: { timeZone: '', locale: '', seconds: true, size: '3em' } },
+  'ms:color': { label: 'Colour', defaults: { color: '#336699' } },
+};
+
+/** French labels for {@link registerBuiltinPanels}. */
+export const builtinPanelLabelsFr: Record<keyof typeof builtinPanels, string> = {
+  'ms:text': 'Texte',
+  'ms:image': 'Image',
+  'ms:iframe': 'Page web',
+  'ms:clock': 'Horloge',
+  'ms:color': 'Couleur unie',
+};
+
 /** Adds the built-in panels (`ms:text`, `ms:image`, `ms:iframe`, `ms:clock`, `ms:color`). */
-export function registerBuiltinPanels(registry: PanelRegistry): PanelRegistry {
-  return registry.registerAll(builtinPanels as Record<string, PanelFactory<any>>);
+export function registerBuiltinPanels(registry: PanelRegistry, options: { labels?: Partial<Record<keyof typeof builtinPanels, string>> } = {}): PanelRegistry {
+  for (const [name, factory] of Object.entries(builtinPanels) as [keyof typeof builtinPanels, PanelFactory<any>][]) {
+    const { label, defaults } = builtinPanelOptions[name];
+    registry.register(name, factory, { label: options.labels?.[name] ?? label, defaults });
+  }
+  return registry;
 }
 
 /**
