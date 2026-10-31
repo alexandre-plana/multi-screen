@@ -14,3 +14,5 @@ export { createMemoryBus } from './transports/memory.js';
 export { broadcastChannelTransport } from './transports/broadcast-channel.js';
 export { postMessageTransport, type PostMessageTransportOptions } from './transports/post-message.js';
 export { webSocketTransport, type WebSocketLike, type WebSocketTransport, type WebSocketTransportOptions } from './transports/websocket.js';
+export { signedTransport, type SignedTransportOptions } from './transports/signed.js';
+export * from './playlist.js';

@@ -2,7 +2,8 @@
 
 **Composez des écrans à partir de panneaux [dockview](https://dockview.dev), créez leurs routes à l'exécution et pilotez-les à distance.**
 
-[Démo en ligne](https://alexandre-plana.github.io/multi-screen/) (après activation de GitHub Pages) · [Architecture](docs/ARCHITECTURE.md) · [Protocole](docs/PROTOCOL.md)
+[Démo en ligne](https://alexandre-plana.github.io/multi-screen/) (après activation de GitHub Pages) · [Architecture](docs/ARCHITECTURE.md) · [Protocole](docs/PROTOCOL.md) · [English](docs/en/README.md)
+
 TypeScript · sans framework (React en option) · licence MIT
 
 ---
@@ -16,7 +17,8 @@ multi-screen décrit un écran comme une **donnée JSON** : un ensemble de panne
 | **Écrans en JSON** | `ScreenDefinition` : panneaux déclaratifs *ou* disposition dockview exacte, thème, affichage, métadonnées. Validée à la réception, versionnée, sérialisable partout. |
 | **Routes dynamiques** | `ScreenRouter` ajoute, remplace et retire des routes pendant l'exécution (`/hall/:zone`, `/mur{/:index}`…). Il s'appuie sur [`history`](https://github.com/remix-run/history) et [`path-to-regexp`](https://github.com/pillarjs/path-to-regexp), et accepte n'importe quel autre routeur par un adaptateur de trois méthodes. |
 | **Partage** | `ScreenHub` (régie) ↔ `ScreenDevice` (écran) : envoyer, mettre à jour par patch, retirer, naviguer, thème, affichage, identification, commandes libres. Accusés de réception, ciblage par id, par étiquette (`tag:hall`) ou global. |
-| **Transports** | BroadcastChannel (même navigateur), WebSocket (réseau, avec relais fourni), postMessage (iframes, popups), mémoire (tests). Une interface de deux méthodes pour en écrire d'autres (WebRTC, MQTT, SSE…). |
+| **Transports** | BroadcastChannel (même navigateur), WebSocket (réseau, avec relais fourni), postMessage (iframes, popups), mémoire (tests), et une enveloppe de signature HMAC. Une interface de deux méthodes pour en écrire d'autres (WebRTC, MQTT, SSE…). |
+| **Playlists** | Rotation d'écrans pour l'affichage dynamique, pilotable à distance. |
 | **Liens** | `createShareUrl(screen)` met l'écran entier dans l'URL (compressé, dans le fragment) : un QR code suffit, sans serveur. |
 | **Affichage** | Résolution virtuelle ajustée à l'écran, rotation 90/180/270°, zoom, onglets masqués, mise en page verrouillée, curseur caché, plein écran, écran maintenu allumé. |
 | **Thèmes** | Tous les thèmes dockview par leur nom (`abyss`, `dracula`, `githubDark`…), surcharge de n'importe quelle variable CSS, thèmes personnels enregistrables. |
@@ -205,6 +207,31 @@ const adapter: RouterAdapter = {
 | `createMemoryBus().connect()` | même page | tests, prévisualisation |
 
 Le protocole est documenté dans [docs/PROTOCOL.md](docs/PROTOCOL.md) : un appareil peut être écrit dans un autre langage.
+
+### Signature des messages
+
+Sur un réseau partagé, enveloppez n'importe quel transport : chaque message est signé (HMAC-SHA256), et seuls les messages signés avec le même secret, récents et jamais vus sont délivrés.
+
+```ts
+const transport = signedTransport(webSocketTransport({ url }), { secret: secretDuSite });
+```
+
+Le secret est connu de chaque appareil : la signature écarte les pairs qui ne le possèdent pas, elle ne protège pas contre un appareil compromis. Évitez de l'inscrire dans un bundle public ; fournissez-le à l'installation de la borne.
+
+### Playlists
+
+Pour l'affichage dynamique, une playlist fait défiler des écrans par le routeur de l'appareil (les URL restent cohérentes) :
+
+```ts
+const playlist = createPlaylist({ router: device.router, items: [
+  { screenId: 'accueil', durationMs: 20_000 },
+  { screenId: 'promo', durationMs: 10_000, params: { n: '2' } },
+] });
+
+// Pilotée depuis la régie par une commande libre :
+device.subscribe((e) => e.type === 'custom' && e.name === 'playlist' && playlist.setItems(e.data as PlaylistItem[]));
+await hub.command('tag:hall', 'playlist', items);
+```
 
 ### Le relais WebSocket
 
