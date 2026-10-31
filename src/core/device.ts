@@ -30,6 +30,37 @@ export interface ScreenDeviceOptions {
   deny?: MessageType[];
   /** Start immediately. Default true. */
   autoStart?: boolean;
+  /**
+   * Keeps theme and display overrides across reloads (kiosks that reboot).
+   * A key uses localStorage; an object plugs any storage.
+   */
+  persistOverrides?: string | OverrideStorage;
+}
+
+/** Storage of a device's theme and display overrides. */
+export interface OverrideStorage {
+  load(): { theme?: ThemeSpec; display?: DisplaySpec } | undefined;
+  save(overrides: { theme?: ThemeSpec; display?: DisplaySpec }): void;
+}
+
+function localOverrideStorage(key: string): OverrideStorage {
+  return {
+    load() {
+      try {
+        const raw = globalThis.localStorage?.getItem(key);
+        return raw ? (JSON.parse(raw) as { theme?: ThemeSpec; display?: DisplaySpec }) : undefined;
+      } catch {
+        return undefined;
+      }
+    },
+    save(overrides) {
+      try {
+        globalThis.localStorage?.setItem(key, JSON.stringify(overrides));
+      } catch {
+        // Storage full or blocked: overrides stay in memory.
+      }
+    },
+  };
 }
 
 /**
@@ -51,6 +82,7 @@ export class ScreenDevice {
   #started = false;
   #announceQueued = false;
   #heartbeat: ReturnType<typeof setInterval> | undefined;
+  readonly #overrideStorage: OverrideStorage | undefined;
 
   constructor(options: ScreenDeviceOptions) {
     this.#options = options;
@@ -58,6 +90,15 @@ export class ScreenDevice {
     this.info = { ...options.info, id: options.info?.id ?? persistentDeviceId() } as DeviceInfo;
     this.store = options.store ?? new ScreenStore();
     this.router = options.router ?? new ScreenRouter();
+    const persist = options.persistOverrides;
+    this.#overrideStorage = typeof persist === 'string' ? localOverrideStorage(persist) : persist;
+    const saved = this.#overrideStorage?.load();
+    try {
+      if (saved?.theme) this.#theme = validateTheme(saved.theme);
+      if (saved?.display) this.#display = validateDisplay(saved.display);
+    } catch {
+      // Ignore corrupted overrides.
+    }
     if (options.autoStart !== false) this.start();
   }
 
@@ -143,13 +184,19 @@ export class ScreenDevice {
 
   setTheme(theme: ThemeSpec | null): void {
     this.#theme = theme ? validateTheme(theme) : undefined;
+    this.#saveOverrides();
     this.#stateChanged();
   }
 
   setDisplay(display: DisplaySpec | null, options: { merge?: boolean } = {}): void {
     const next = display ? validateDisplay(display) : undefined;
     this.#display = next && options.merge ? mergeDisplay(this.#display, next) : next;
+    this.#saveOverrides();
     this.#stateChanged();
+  }
+
+  #saveOverrides(): void {
+    this.#overrideStorage?.save({ ...(this.#theme ? { theme: this.#theme } : {}), ...(this.#display ? { display: this.#display } : {}) });
   }
 
   /** Stores a screen and shows it, as if a hub had sent it. */

@@ -91,3 +91,21 @@ describe('Playlist', () => {
     expect(playlist.playing).toBe(false);
   });
 });
+
+describe('device overrides persistence', () => {
+  it('restores theme and display overrides after a reload', () => {
+    let saved: unknown;
+    const storage = { load: () => saved as never, save: (o: unknown) => void (saved = o) };
+    const bus = createMemoryBus();
+    const first = createScreenDevice({ transport: bus.connect(), info: { id: 'k' }, heartbeatMs: 0, persistOverrides: storage });
+    first.setTheme({ base: 'light' });
+    first.setDisplay({ rotation: 270 });
+    first.dispose();
+    const second = createScreenDevice({ transport: bus.connect(), info: { id: 'k' }, heartbeatMs: 0, persistOverrides: storage });
+    expect(second.themeOverride).toEqual({ base: 'light' });
+    expect(second.displayOverride).toEqual({ rotation: 270 });
+    second.setDisplay(null);
+    expect(saved).toEqual({ theme: { base: 'light' } });
+    second.dispose();
+  });
+});

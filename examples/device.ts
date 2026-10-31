@@ -18,6 +18,7 @@ const device = createScreenDevice({
   store,
   router,
   info: { id, name, tags, kind: 'display', capabilities: ['fullscreen', 'wakeLock'] },
+  persistOverrides: `multi-screen-demo:overrides:${id}`,
 });
 document.title = `${name} · multi-screen`;
 

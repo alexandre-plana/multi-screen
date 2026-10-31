@@ -198,6 +198,8 @@ const adapter: RouterAdapter = {
 - `hub.update(id, patch)` envoie un **patch** aux appareils à jour et l'**écran complet** à ceux qui ont divergé.
 - Thème et affichage existent à deux niveaux : dans l'écran (pour tous) et par appareil (`setTheme`, `setDisplay`), le second l'emportant.
 - `accept` (appareil) et `acceptDevice` (régie) sont les points d'autorisation ; `deny` refuse des commandes précises.
+- `persistOverrides: 'cle'` conserve les surcharges de thème et d'affichage d'un appareil après un redémarrage (localStorage, ou tout stockage `{ load, save }`).
+- La régie n'a pas besoin de navigateur : `ScreenHub` fonctionne dans Node, un worker ou une fonction serveur (voir [`examples/node-hub.mjs`](examples/node-hub.mjs)).
 
 | Transport | Portée | Usage |
 | --- | --- | --- |
