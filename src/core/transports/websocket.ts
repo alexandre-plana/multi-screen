@@ -42,6 +42,7 @@ export function webSocketTransport(options: WebSocketTransportOptions): WebSocke
   const Ctor = options.WebSocket ?? (globalThis as unknown as { WebSocket?: WebSocketTransportOptions['WebSocket'] }).WebSocket;
   if (!Ctor) throw new Error('No WebSocket implementation available: pass options.WebSocket');
   const listeners = new Set<(message: AnyEnvelope) => void>();
+  const openListeners = new Set<() => void>();
   const queue: { data: string; at: number }[] = [];
   const maxAge = options.maxQueueAgeMs ?? 10_000;
   const maxQueue = options.maxQueue ?? 500;
@@ -74,6 +75,7 @@ export function webSocketTransport(options: WebSocketTransportOptions): WebSocke
     ws.onopen = () => {
       attempt = 0;
       setStatus('open');
+      for (const listener of [...openListeners]) listener();
       const now = Date.now();
       while (queue.length && ws.readyState === 1) {
         const item = queue.shift()!;
@@ -123,8 +125,13 @@ export function webSocketTransport(options: WebSocketTransportOptions): WebSocke
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
+    onOpen(listener) {
+      openListeners.add(listener);
+      return () => openListeners.delete(listener);
+    },
     close() {
       closed = true;
+      openListeners.clear();
       clearTimeout(timer);
       listeners.clear();
       const ws = socket;

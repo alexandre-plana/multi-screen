@@ -69,7 +69,7 @@ L'affichage est calculé par une fonction pure (`computeStage`) testée sans DOM
 | Besoin | Point d'extension |
 | --- | --- |
 | Autre routeur | `RouterAdapter` |
-| Autre canal | `Transport` (`send`, `subscribe`, `close?`) |
+| Autre canal | `Transport` (`send`, `subscribe`, `close?`, `onOpen?` pour réannoncer à la reconnexion) |
 | Persistance serveur, IndexedDB | `ScreenStorage` (`load`, `save`, synchrones ou non) |
 | Autre framework de composants | `PanelFactory`, `elementPanel`, `reactPanel` |
 | Thème maison | `registerTheme(nom, themeDockview)` ou `variables` |

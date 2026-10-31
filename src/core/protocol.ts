@@ -104,4 +104,9 @@ export interface Transport {
   send(message: AnyEnvelope): void;
   subscribe(listener: (message: AnyEnvelope) => void): () => void;
   close?(): void;
+  /**
+   * Optional: called each time the link (re)opens, so peers can re-announce
+   * themselves instead of waiting for the next heartbeat.
+   */
+  onOpen?(listener: () => void): () => void;
 }

@@ -69,6 +69,7 @@ export class ScreenHub {
   readonly #events = new Emitter<HubEvent>();
   readonly #options: ScreenHubOptions;
   readonly #unsubscribe: Unsubscribe;
+  readonly #unsubscribeOpen: Unsubscribe;
   readonly #sweeper: ReturnType<typeof setInterval>;
 
   constructor(options: ScreenHubOptions) {
@@ -77,6 +78,7 @@ export class ScreenHub {
     this.store = options.store ?? new ScreenStore();
     this.#transport = options.transport;
     this.#unsubscribe = this.#transport.subscribe((message) => this.#receive(message));
+    this.#unsubscribeOpen = this.#transport.onOpen?.(() => this.discover()) ?? (() => undefined);
     const stale = options.staleAfterMs ?? 45_000;
     this.#sweeper = setInterval(() => this.#sweep(), Math.max(250, stale / 3));
     (this.#sweeper as { unref?: () => void }).unref?.();
@@ -215,6 +217,7 @@ export class ScreenHub {
   dispose(): void {
     clearInterval(this.#sweeper);
     this.#unsubscribe();
+    this.#unsubscribeOpen();
     for (const pending of this.#pending.values()) pending.resolve({} as CommandResult);
     this.#events.clear();
   }

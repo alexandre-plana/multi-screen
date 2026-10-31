@@ -107,6 +107,7 @@ export class ScreenDevice {
     this.#started = true;
     this.#cleanups.push(
       this.#transport.subscribe((message) => this.#receive(message)),
+      this.#transport.onOpen?.(() => this.announce()) ?? (() => undefined),
       this.store.subscribe((event) => {
         if (event.type === 'put') this.#syncRoute(event.screen);
         else if (event.type === 'remove') this.#syncRoute(undefined, event.screen.id);

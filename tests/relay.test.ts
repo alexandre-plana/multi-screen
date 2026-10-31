@@ -53,4 +53,26 @@ describe('relay', () => {
     expect(result.ok).toBe(true);
     expect(device.router.current?.screenId).toBe('news');
   });
+
+  it('re-announces devices as soon as the relay comes back', async () => {
+    const server = new WebSocketServer({ port: 0 });
+    await once(server, 'listening');
+    const port = (server.address() as { port: number }).port;
+    const relay = attachWebSocketServer(server);
+    const url = `ws://127.0.0.1:${port}/`;
+    const Ctor = WebSocket as unknown as new (url: string) => WebSocketLike;
+    const hubTransport = webSocketTransport({ url, WebSocket: Ctor, minDelayMs: 50, maxDelayMs: 100 });
+    const deviceTransport = webSocketTransport({ url, WebSocket: Ctor, minDelayMs: 50, maxDelayMs: 100 });
+    const device = createScreenDevice({ transport: deviceTransport, info: { id: 'tv' }, heartbeatMs: 0 });
+    const hub = createScreenHub({ transport: hubTransport, ackTimeoutMs: 500 });
+    cleanups.push(() => new Promise<void>((r) => server.close(() => r())), () => hubTransport.close(), () => deviceTransport.close(), () => hub.dispose(), () => device.dispose());
+    for (let i = 0; i < 50 && !hub.device('tv')?.online; i++) await wait(20);
+    const before = hub.device('tv')!.lastSeen;
+    await wait(30);
+    relay.close(); // drops every socket; both sides reconnect
+    // Heartbeat is off: only the reconnect hook can produce a new announce.
+    for (let i = 0; i < 100 && hub.device('tv')!.lastSeen === before; i++) await wait(20);
+    expect(hub.device('tv')!.lastSeen).toBeGreaterThan(before);
+    expect((await hub.identify('tv')).ok).toBe(true);
+  });
 });

@@ -76,6 +76,7 @@ export function signedTransport(inner: Transport, options: SignedTransportOption
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
+    ...(inner.onOpen ? { onOpen: (listener: () => void) => inner.onOpen!(listener) } : {}),
     close() {
       unsubscribe();
       listeners.clear();
