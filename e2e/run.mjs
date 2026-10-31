@@ -181,6 +181,26 @@ try {
   await managerPage.locator('.mse-title').waitFor();
   assert((await managerPage.inputValue('.mse-title')) === 'Tableau des ventes', '"Edit" opens the screen in the editor');
 
+  // Landing page: the guided tour drives the real library (hub, devices, patch).
+  const home = await context.newPage();
+  await home.goto(`${base}/index.html`);
+  await home.locator('#log li .type[data-kind="patch"]').first().waitFor({ timeout: 30000 });
+  assert(/o$/.test(await home.locator('#m-patch').textContent()), 'landing: the tour sends a live patch and measures it');
+  await home.locator('.device-tv .ms-panel').first().waitFor();
+  await home.fill('#route-url', '/fichiers/a/b');
+  assert((await home.locator('#route-match .screen').textContent()) === 'explorateur', 'landing: the router lab matches as you type');
+
+  // Documentation: live examples.
+  const docs = await context.newPage();
+  await docs.goto(`${base}/docs.html`);
+  await docs.getByRole('button', { name: "hub.show('tag:hall', 'accueil')" }).click();
+  await docs.locator('#live-quick', { hasText: 'Bienvenue' }).waitFor();
+  await docs.getByRole('button', { name: 'createShareUrl(écran)' }).click();
+  await docs.locator('#live-share .hit').waitFor();
+  await docs.locator('#live-editor').scrollIntoViewIfNeeded();
+  await docs.locator('#live-editor .mse-chip').first().waitFor();
+  assert(true, 'documentation: live examples (hub/device, share link, editor) work');
+
   if (shots) {
     await control.screenshot({ path: 'docs/assets/control.png' });
     await a.screenshot({ path: 'docs/assets/device-hall.png' });

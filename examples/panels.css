@@ -1,0 +1,24 @@
+/* Demo panels */
+.kpi { container-type: size; display: flex; flex-direction: column; justify-content: center; height: 100%; padding: 1em 1.5em; font-family: system-ui, sans-serif; }
+.kpi-label { opacity: .7; font-size: 1.1em; }
+.kpi-value { font-size: min(2.8em, 15cqi, 34cqh); white-space: nowrap; font-weight: 700; font-variant-numeric: tabular-nums; }
+.kpi-trend[data-dir=up] { color: #4cc27f; }
+.kpi-trend[data-dir=down] { color: #ff7a6b; }
+.bars { display: flex; flex-direction: column; height: 100%; padding: 1em; box-sizing: border-box; }
+.bars-title { opacity: .8; margin-bottom: .5em; font-family: system-ui, sans-serif; }
+.bars svg { flex: 1; width: 100%; }
+.bars rect { fill: var(--demo-accent, #6a9cff); }
+.status-board { display: flex; flex-direction: column; gap: .5em; height: 100%; padding: 1em 1.2em; box-sizing: border-box; font-family: system-ui, sans-serif; }
+.status-title { opacity: .75; margin-bottom: .2em; }
+.status-row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: .6em; padding: .45em .6em; border-radius: .4em; background: color-mix(in srgb, currentColor 6%, transparent); }
+.status-row i { width: .6em; height: .6em; border-radius: 50%; background: #3ddc97; box-shadow: 0 0 .5em #3ddc97; }
+.status-row[data-state=warn] i { background: #f5b544; box-shadow: 0 0 .5em #f5b544; }
+.status-row[data-state=down] i { background: #ff6b6b; box-shadow: 0 0 .5em #ff6b6b; }
+.status-row em { font-style: normal; opacity: .7; font-variant-numeric: tabular-nums; }
+.line-chart { container-type: inline-size; display: flex; flex-direction: column; height: 100%; padding: 1em; box-sizing: border-box; font-family: system-ui, sans-serif; }
+.line-head { display: flex; flex-wrap: wrap; gap: .2em .8em; justify-content: space-between; align-items: baseline; margin-bottom: .4em; }
+.line-head span { opacity: .75; }
+.line-head b { font-size: min(1.6em, 11cqi); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.line-chart svg { flex: 1; width: 100%; min-height: 0; }
+.line-stroke { fill: none; stroke: var(--demo-accent, #5b8cff); stroke-width: 2; }
+.line-area { fill: color-mix(in srgb, var(--demo-accent, #5b8cff) 22%, transparent); }

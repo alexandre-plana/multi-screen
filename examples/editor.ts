@@ -1,6 +1,9 @@
 import { createScreenHub, createScreenStore, webStorage } from 'multi-screen';
 import { createScreenEditor, editorLabelsFr } from 'multi-screen/dockview';
 import { createDemoRegistry, presets, transportFromUrl } from './shared';
+import { mountLogo } from './site';
+
+mountLogo();
 
 // Same library as the control page: screens saved here appear there.
 const store = createScreenStore({ storage: webStorage('multi-screen-demo:library') });

@@ -4,25 +4,24 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Écrans · multi-screen</title>
+    <link rel="stylesheet" href="./site.css" />
     <link rel="stylesheet" href="./demo.css" />
-    <style>
-      body { display: grid; grid-template-rows: auto 1fr; }
-      .topbar { display: flex; gap: 12px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
-      .topbar h1 { font-size: 16px; margin: 0; }
-      .topbar nav { display: flex; gap: 12px; font-size: 13px; }
-      .topbar nav [aria-current] { font-weight: 600; color: inherit; text-decoration: none; }
-      #manager { overflow: auto; min-height: 0; }
-    </style>
+    <link rel="stylesheet" href="./app.css" />
   </head>
   <body>
-    <header class="topbar">
-      <h1>multi-screen</h1>
-      <nav aria-label="Démo">
-        <a href="./manager.html" aria-current="page">Écrans</a>
-        <a href="./editor.html">Éditeur</a>
-        <a href="./control.html">Régie</a>
-      </nav>
-      <span id="transport" style="color:var(--muted);font-size:12px;margin-left:auto"></span>
+    <header class="site-nav">
+      <div class="wrap">
+        <a class="brand" href="./index.html"><span data-logo></span>multi-screen</a>
+        <nav aria-label="Principale">
+          <a href="./index.html#demo">Démo</a>
+          <a href="./docs.html">Documentation</a>
+          <a href="./manager.html" aria-current="page">Écrans</a>
+          <a href="./editor.html">Éditeur</a>
+          <a href="./control.html">Régie</a>
+        </nav>
+        <span class="spacer"></span>
+        <span class="app-status" id="transport"></span>
+      </div>
     </header>
     <main id="manager"></main>
     <script type="module" src="./manager.ts"></script>

@@ -1,4 +1,5 @@
 import 'dockview/dist/styles/dockview.css';
+import './panels.css';
 import { broadcastChannelTransport, webSocketTransport, type ScreenDefinition, type Transport } from 'multi-screen';
 import { builtinPanelLabelsFr, createPanelRegistry, registerBuiltinPanels, type PanelFactory } from 'multi-screen/dockview';
 
@@ -69,10 +70,82 @@ const bars: PanelFactory<{ title?: string; values?: number[]; labels?: string[] 
   return { update: apply };
 };
 
+/** A status board: `{ title, rows: [{ label, state: 'ok' | 'warn' | 'down', detail }] }`. */
+type StatusRow = { label: string; state: 'ok' | 'warn' | 'down'; detail?: string };
+const status: PanelFactory<{ title?: string; rows?: StatusRow[] }> = ({ element, params }) => {
+  const wrap = document.createElement('div');
+  wrap.className = 'status-board';
+  element.append(wrap);
+  const apply = (p: typeof params) => {
+    wrap.replaceChildren();
+    const title = document.createElement('div');
+    title.className = 'status-title';
+    title.textContent = p.title ?? '';
+    wrap.append(title);
+    for (const row of p.rows ?? []) {
+      const line = document.createElement('div');
+      line.className = 'status-row';
+      line.dataset.state = row.state;
+      const dot = document.createElement('i');
+      const label = document.createElement('span');
+      label.textContent = row.label;
+      const detail = document.createElement('em');
+      detail.textContent = row.detail ?? '';
+      line.append(dot, label, detail);
+      wrap.append(line);
+    }
+  };
+  apply(params);
+  return { update: apply };
+};
+
+/** A line chart in SVG: `{ title, values: number[], unit? }`. */
+const line: PanelFactory<{ title?: string; values?: number[]; unit?: string }> = ({ element, params }) => {
+  const ns = 'http://www.w3.org/2000/svg';
+  const wrap = document.createElement('div');
+  wrap.className = 'line-chart';
+  const head = document.createElement('div');
+  head.className = 'line-head';
+  const title = document.createElement('span');
+  const last = document.createElement('b');
+  head.append(title, last);
+  const svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('viewBox', '0 0 100 40');
+  svg.setAttribute('preserveAspectRatio', 'none');
+  const area = document.createElementNS(ns, 'path');
+  area.setAttribute('class', 'line-area');
+  const stroke = document.createElementNS(ns, 'path');
+  stroke.setAttribute('class', 'line-stroke');
+  stroke.setAttribute('vector-effect', 'non-scaling-stroke');
+  svg.append(area, stroke);
+  wrap.append(head, svg);
+  element.append(wrap);
+  const apply = (p: typeof params) => {
+    const values = p.values ?? [];
+    title.textContent = p.title ?? '';
+    last.textContent = values.length ? `${values.at(-1)!.toLocaleString('fr-FR')}${p.unit ? ` ${p.unit}` : ''}` : '';
+    const max = Math.max(1, ...values);
+    const min = Math.min(0, ...values);
+    const pts = values.map((v, i) => [(i / Math.max(1, values.length - 1)) * 100, 38 - ((v - min) / (max - min || 1)) * 34] as const);
+    const d = pts.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(2)},${y.toFixed(2)}`).join(' ');
+    stroke.setAttribute('d', d);
+    area.setAttribute('d', pts.length ? `${d} L100,40 L0,40 Z` : '');
+    svg.setAttribute('aria-label', `${p.title ?? 'Courbe'} : ${values.join(', ')}`);
+    svg.setAttribute('role', 'img');
+  };
+  apply(params);
+  return { update: apply };
+};
+
 export function createDemoRegistry() {
   return registerBuiltinPanels(createPanelRegistry(), { labels: builtinPanelLabelsFr })
     .register('demo:kpi', kpi, { label: 'Indicateur', defaults: { label: 'Indicateur', value: 1200, unit: '€', trend: 3.5 } })
-    .register('demo:bars', bars, { label: 'Histogramme', defaults: { title: 'Histogramme', values: [4, 8, 6, 10, 7], labels: ['L', 'M', 'M', 'J', 'V'] } });
+    .register('demo:bars', bars, { label: 'Histogramme', defaults: { title: 'Histogramme', values: [4, 8, 6, 10, 7], labels: ['L', 'M', 'M', 'J', 'V'] } })
+    .register('demo:status', status, {
+      label: 'Tableau d’état',
+      defaults: { title: 'État des lignes', rows: [{ label: 'Ligne A', state: 'ok', detail: 'Nominal' }, { label: 'Ligne B', state: 'warn', detail: 'Retard 4 min' }] },
+    })
+    .register('demo:line', line, { label: 'Courbe', defaults: { title: 'Fréquentation', values: [12, 18, 15, 24, 30, 27, 35], unit: 'pers.' } });
 }
 
 export const presets: ScreenDefinition[] = [

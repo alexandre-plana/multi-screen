@@ -4,16 +4,30 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Régie · multi-screen</title>
+    <link rel="stylesheet" href="./site.css" />
     <link rel="stylesheet" href="./demo.css" />
+    <link rel="stylesheet" href="./app.css" />
   </head>
   <body>
+    <header class="site-nav">
+      <div class="wrap">
+        <a class="brand" href="./index.html"><span data-logo></span>multi-screen</a>
+        <nav aria-label="Principale">
+          <a href="./index.html#demo">Démo</a>
+          <a href="./docs.html">Documentation</a>
+          <a href="./manager.html">Écrans</a>
+          <a href="./editor.html">Éditeur</a>
+          <a href="./control.html" aria-current="page">Régie</a>
+        </nav>
+        <span class="spacer"></span>
+        <span class="app-status" id="nav-status"></span>
+      </div>
+    </header>
     <div class="control">
       <header>
         <h1>Régie</h1>
         <span class="transport" id="transport"></span>
         <span class="spacer"></span>
-        <a href="./manager.html" style="font-size:13px">Écrans</a>
-        <a href="./editor.html" style="font-size:13px">Éditeur d’écrans</a>
         <button id="open-device" type="button">Ouvrir un écran</button>
         <button id="discover" type="button">Rechercher</button>
       </header>

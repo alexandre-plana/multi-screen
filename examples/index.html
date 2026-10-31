@@ -3,29 +3,336 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>multi-screen · démo</title>
-    <link rel="stylesheet" href="./demo.css" />
-    <style>
-      main { max-width: 720px; margin: 0 auto; padding: 32px 16px; }
-      h1 { margin-top: 0; }
-      .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
-      .cards a { display: block; padding: 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); text-decoration: none; color: inherit; }
-      .cards strong { display: block; color: var(--accent); margin-bottom: 4px; }
-      code { font-size: 12px; }
-    </style>
+    <title>multi-screen — composez, routez, diffusez vos écrans</title>
+    <meta name="description" content="Bibliothèque TypeScript : des écrans composés de panneaux dockview, routés à l'exécution et diffusés sur tous vos appareils." />
+    <meta name="theme-color" content="#07090d" />
+    <link rel="stylesheet" href="./site.css" />
+    <link rel="stylesheet" href="./landing.css" />
   </head>
   <body>
-    <main>
-      <h1>multi-screen</h1>
-      <p>Composez des écrans à partir de panneaux dockview, créez leurs routes à l'exécution et envoyez-les à n'importe quel appareil.</p>
-      <div class="cards">
-        <a href="./manager.html"><strong>Écrans</strong>Gérer tous les écrans créés : aperçus, recherche, diffusion, duplication, import et export.</a>
-        <a href="./editor.html"><strong>Éditeur</strong>Créer des écrans en déposant des panneaux prédéfinis sur un canevas, puis les ordonner.</a>
-        <a href="./control.html"><strong>Régie</strong>Découvrir les écrans, leur envoyer des compositions, changer leur thème et leur affichage.</a>
-        <a href="./device.html?name=Écran%20A&amp;id=ecran-a&amp;tags=hall" target="_blank"><strong>Écran A</strong>Un appareil d'affichage (étiquette <code>hall</code>).</a>
-        <a href="./device.html?name=Écran%20B&amp;id=ecran-b&amp;tags=bureau" target="_blank"><strong>Écran B</strong>Un second appareil (étiquette <code>bureau</code>).</a>
+    <header class="site-nav">
+      <div class="wrap">
+        <a class="brand" href="./index.html"><span data-logo></span>multi-screen</a>
+        <nav aria-label="Principale">
+          <a href="#demo">Démo</a>
+          <a href="#donnee">L'écran</a>
+          <a href="#routes">Routes</a>
+          <a href="#architecture">Architecture</a>
+          <a href="#applis">Applications</a>
+          <a href="./docs.html">Documentation</a>
+        </nav>
+        <span class="spacer"></span>
+        <a class="gh" href="https://github.com/alexandre-plana/multi-screen">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+          GitHub
+        </a>
       </div>
-      <p class="hint">Par défaut, les pages communiquent par BroadcastChannel (onglets du même navigateur). Pour piloter d'autres machines, lancez <code>npx multi-screen-relay</code> et ajoutez <code>?relay=ws://&lt;hôte&gt;:8787</code> à chaque adresse.</p>
+    </header>
+
+    <main>
+      <!-- ============ HERO ============ -->
+      <section class="hero grid-bg">
+        <div class="hero-glow" aria-hidden="true"></div>
+        <div class="wrap hero-copy">
+          <span class="badge"><i></i>v0.1 · TypeScript · dockview · MIT</span>
+          <h1>Un écran est une donnée.<br /><span class="grad">Composez-le, routez-le, diffusez-le.</span></h1>
+          <p class="lead">
+            multi-screen décrit chaque écran en JSON, à partir de panneaux dockview. Ses routes se créent à l'exécution.
+            Une régie l'envoie à n'importe quel appareil, le met à jour en direct et règle à distance son thème et son affichage.
+          </p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="#demo">Voir la démo en direct</a>
+            <a class="btn" href="./docs.html">Documentation</a>
+            <span class="npm"><span class="dollar">$</span><b>npm install multi-screen dockview</b><button type="button" class="copy" data-copy="npm install multi-screen dockview">Copier</button></span>
+          </div>
+        </div>
+
+        <!-- Live studio: the real library, a hub and three devices on an in-page bus. -->
+        <div class="wrap" id="demo">
+          <div class="studio" aria-label="Démonstration en direct">
+            <div class="studio-bar">
+              <span class="lights" aria-hidden="true"><i></i><i></i><i></i></span>
+              <span class="studio-title">régie · 3 appareils · bus mémoire</span>
+              <span class="spacer"></span>
+              <button type="button" class="btn btn-sm" id="tour-toggle">❚❚ Visite guidée</button>
+            </div>
+            <div class="caption" id="caption" aria-live="polite">
+              <span class="caption-step" id="caption-step">01</span>
+              <span class="caption-text" id="caption-text">Les appareils rejoignent le bus et s'annoncent.</span>
+              <code class="caption-code" id="caption-code">createScreenDevice({ transport, info: { name: 'TV Hall', tags: ['hall'] } })</code>
+            </div>
+            <div class="studio-body">
+              <aside class="rail" aria-label="Régie">
+                <div class="rail-group">
+                  <div class="rail-label">Écran</div>
+                  <div class="rail-chips" id="screen-chips" role="group" aria-label="Écran à diffuser"></div>
+                </div>
+                <div class="rail-group">
+                  <div class="rail-label">Cible</div>
+                  <div class="rail-chips" id="target-chips" role="group" aria-label="Cible"></div>
+                </div>
+                <button type="button" class="btn btn-primary rail-send" id="send">Diffuser</button>
+                <div class="rail-group">
+                  <div class="rail-label">Mise à jour en direct <span class="rail-hint">patch JSON</span></div>
+                  <label class="slider">
+                    <span>Chiffre d'affaires</span>
+                    <output id="ca-out">128 400 €</output>
+                    <input type="range" id="ca" min="80000" max="200000" step="100" value="128400" aria-label="Chiffre d'affaires de l'écran Ventes" />
+                  </label>
+                </div>
+                <div class="rail-group">
+                  <div class="rail-label">Thème</div>
+                  <div class="swatches" id="swatches" role="group" aria-label="Thème"></div>
+                </div>
+                <div class="rail-group">
+                  <div class="rail-label">Affichage</div>
+                  <div class="rail-chips" id="display-chips" role="group" aria-label="Affichage"></div>
+                </div>
+                <div class="rail-row">
+                  <button type="button" class="btn btn-sm" id="identify">Identifier</button>
+                  <button type="button" class="btn btn-sm" id="reset">Réinitialiser</button>
+                </div>
+              </aside>
+              <div class="stage" id="stage">
+                <svg class="wires" id="wires" aria-hidden="true"></svg>
+                <div class="hub-node" id="hub-node"><span data-logo></span><b>hub</b></div>
+                <div class="stage-inner"><div class="devices" id="devices"></div></div>
+              </div>
+            </div>
+            <div class="console">
+              <div class="console-head">
+                <span class="console-title">Protocole</span>
+                <span class="metric"><b id="m-count">0</b> messages</span>
+                <span class="metric"><b id="m-bytes">0 o</b> échangés</span>
+                <span class="metric metric-accent">dernier patch <b id="m-patch">—</b> <span class="vs">vs écran complet</span> <b id="m-full">—</b></span>
+              </div>
+              <ol class="log" id="log" aria-label="Messages échangés"></ol>
+            </div>
+          </div>
+        </div>
+
+        <div class="wrap stats">
+          <div><b>0</b><span>dépendance de framework</span></div>
+          <div><b>4</b><span>transports fournis, un contrat de 2 méthodes</span></div>
+          <div><b>18</b><span>thèmes dockview par leur nom</span></div>
+          <div><b>92</b><span>tests, plus un parcours complet dans Chromium</span></div>
+        </div>
+      </section>
+
+      <!-- ============ DATA ============ -->
+      <section class="section" id="donnee">
+        <div class="wrap">
+          <div class="section-head">
+            <span class="eyebrow">01 · Le modèle</span>
+            <h2>L'écran est un document JSON, versionné et diffusé par patch.</h2>
+            <p>Bougez le curseur « Chiffre d'affaires » de la démo : la régie calcule un JSON Merge Patch, l'envoie aux appareils qui détiennent l'écran, et seuls les paramètres du panneau changent. Rien n'est recréé.</p>
+          </div>
+          <div class="data-grid">
+            <div class="data-col">
+              <div class="data-head"><span>Écran <code>ventes</code></span><span class="pill" id="data-version">v1</span><span class="pill pill-dim" id="data-hash">#</span></div>
+              <div id="data-screen"></div>
+            </div>
+            <div class="data-col">
+              <div class="data-head"><span>Dernier message <code>screen/patch</code></span><span class="pill pill-green" id="data-size">—</span></div>
+              <div id="data-patch"></div>
+              <ul class="facts">
+                <li><b>Validé</b> à la réception : identifiants, routes, thèmes, affichage.</li>
+                <li><b>Empreinte FNV-1a</b> du contenu : un appareil qui a divergé reçoit l'écran complet.</li>
+                <li><b>Accusé de réception</b> pour chaque commande : on sait qui n'a pas reçu.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ ROUTES ============ -->
+      <section class="section" id="routes">
+        <div class="wrap">
+          <div class="section-head">
+            <span class="eyebrow">02 · Routage dynamique</span>
+            <h2>Des routes créées, remplacées et retirées pendant l'exécution.</h2>
+            <p>Le <code>ScreenRouter</code> repose sur <code>history</code> et <code>path-to-regexp</code>. Essayez : ajoutez une route, tapez une adresse, retirez une route. La correspondance se recalcule aussitôt.</p>
+          </div>
+          <div class="router-lab card">
+            <div class="router-routes">
+              <div class="lab-title">Table des routes <span class="rail-hint">ordre de correspondance</span></div>
+              <ol id="route-list"></ol>
+              <form id="route-form" class="route-form">
+                <input id="route-path" placeholder="/salle/:numero" aria-label="Motif de la route" required />
+                <input id="route-screen" placeholder="salle" aria-label="Écran" required />
+                <button class="btn btn-sm btn-primary">Ajouter</button>
+              </form>
+              <p class="form-error" id="route-error" role="alert"></p>
+            </div>
+            <div class="router-test">
+              <div class="lab-title">Adresse</div>
+              <div class="url-bar"><span>ecran.local</span><input id="route-url" value="/hall/nord" aria-label="Chemin à tester" /></div>
+              <div class="match" id="route-match"></div>
+              <div id="route-code"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ ARCHITECTURE ============ -->
+      <section class="section" id="architecture">
+        <div class="wrap">
+          <div class="section-head">
+            <span class="eyebrow">03 · Architecture</span>
+            <h2>Un cœur sans framework, des couches que vous remplacez.</h2>
+            <p>Chaque couche ne dépend que de celle du dessous. Stockage, transport, routeur, panneaux et autorisation sont des points d'extension.</p>
+          </div>
+          <div class="arch">
+            <div class="arch-row">
+              <div class="arch-label">Intégrations</div>
+              <div class="arch-cells">
+                <div class="cell"><b>React</b><span>reactPanel · hooks</span></div>
+                <div class="cell"><b>Web Components</b><span>elementPanel · Lit, Vue, Svelte</span></div>
+                <div class="cell"><b>Node</b><span>ScreenHub sans navigateur</span></div>
+                <div class="cell"><b>Relais</b><span>npx multi-screen-relay</span></div>
+              </div>
+            </div>
+            <div class="arch-row">
+              <div class="arch-label">Rendu <code>multi-screen/dockview</code></div>
+              <div class="arch-cells">
+                <div class="cell cell-blue"><b>ScreenView</b><span>mises à jour incrémentales</span></div>
+                <div class="cell cell-blue"><b>Outlet</b><span>routeur + store + vue</span></div>
+                <div class="cell cell-blue"><b>Éditeur</b><span>palette · canevas · inspecteur</span></div>
+                <div class="cell cell-blue"><b>Gestionnaire</b><span>tous les écrans créés</span></div>
+              </div>
+            </div>
+            <div class="arch-row">
+              <div class="arch-label">Cœur <code>multi-screen</code></div>
+              <div class="arch-cells">
+                <div class="cell"><b>ScreenStore</b><span>versionné · observable</span></div>
+                <div class="cell"><b>ScreenRouter</b><span>routes à l'exécution</span></div>
+                <div class="cell"><b>ScreenHub ↔ ScreenDevice</b><span>protocole · accusés</span></div>
+                <div class="cell"><b>Liens · Playlists</b><span>partage sans serveur</span></div>
+              </div>
+            </div>
+            <div class="arch-row">
+              <div class="arch-label">Transports</div>
+              <div class="arch-cells">
+                <div class="cell cell-dim"><b>BroadcastChannel</b><span>onglets d'un navigateur</span></div>
+                <div class="cell cell-dim"><b>WebSocket</b><span>réseau · reconnexion</span></div>
+                <div class="cell cell-dim"><b>postMessage</b><span>iframes · popups</span></div>
+                <div class="cell cell-dim"><b>signedTransport</b><span>HMAC-SHA256 · anti-rejeu</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="code-pair">
+            <div>
+              <div class="pair-title"><span class="eyebrow">Appareil</span> affiche ce qu'on lui envoie</div>
+              <textarea class="src" data-lang="ts" data-title="device.ts" hidden>
+                import 'dockview/dist/styles/dockview.css';
+                import { broadcastChannelTransport, createScreenDevice, createScreenRouter, hashRouter } from 'multi-screen';
+                import { createPanelRegistry, createScreenOutlet, registerBuiltinPanels } from 'multi-screen/dockview';
+
+                const device = createScreenDevice({
+                  transport: broadcastChannelTransport(),
+                  router: createScreenRouter({ adapter: hashRouter() }),
+                  info: { name: 'TV Hall', tags: ['hall'] },
+                });
+
+                createScreenOutlet(document.getElementById('app')!, {
+                  registry: registerBuiltinPanels(createPanelRegistry()),
+                  router: device.router,
+                  device,
+                });
+              </textarea>
+            </div>
+            <div>
+              <div class="pair-title"><span class="eyebrow">Régie</span> compose et pilote</div>
+              <textarea class="src" data-lang="ts" data-title="control.ts" hidden>
+                import { broadcastChannelTransport, createScreenHub } from 'multi-screen';
+
+                const hub = createScreenHub({ transport: broadcastChannelTransport() });
+
+                hub.store.put({
+                  id: 'accueil',
+                  route: '/accueil',
+                  theme: { base: 'abyss' },
+                  panels: [
+                    { id: 'titre', component: 'ms:text', params: { text: 'Bienvenue' } },
+                    { id: 'heure', component: 'ms:clock', position: { referencePanel: 'titre', direction: 'below' } },
+                  ],
+                });
+
+                await hub.show('tag:hall', 'accueil');           // stocké, routé, affiché
+                await hub.update('accueil', { title: 'Hall' });   // patch en direct
+                await hub.setDisplay('tag:hall', { rotation: 90, hideTabs: true });
+              </textarea>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ FILM ============ -->
+      <section class="section" id="film">
+        <div class="wrap">
+          <div class="section-head">
+            <span class="eyebrow">04 · Le film</span>
+            <h2>60 secondes, entièrement générées par le code du dépôt.</h2>
+            <p>Les données affichées viennent de la bibliothèque compilée : disposition de l'éditeur, versions, routes, messages relevés sur le bus et le patch de 64 octets.</p>
+          </div>
+          <div class="film">
+            <video controls preload="none" poster="../motion/out/poster.png" playsinline>
+              <source src="../motion/out/multi-screen-demo.mp4" type="video/mp4" />
+            </video>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ APPS ============ -->
+      <section class="section" id="applis">
+        <div class="wrap">
+          <div class="section-head">
+            <span class="eyebrow">05 · Applications de démonstration</span>
+            <h2>Les composants de la bibliothèque, en vraie grandeur.</h2>
+            <p>Ces pages partagent la même bibliothèque d'écrans et communiquent entre onglets. Ouvrez la régie ou le gestionnaire, puis un « Écran » dans un autre onglet.</p>
+          </div>
+          <div class="apps">
+            <a class="app" href="./manager.html">
+              <img src="../docs/assets/manager.png" alt="" />
+              <div><b>Écrans</b><span>Tous les écrans créés : miniatures vivantes, diffusion, import et export.</span><code>createScreenManager</code></div>
+            </a>
+            <a class="app" href="./editor.html">
+              <img src="../docs/assets/editor.png" alt="" />
+              <div><b>Éditeur</b><span>Glissez des panneaux prédéfinis sur un canevas pour composer un écran.</span><code>createScreenEditor</code></div>
+            </a>
+            <a class="app" href="./control.html">
+              <img src="../docs/assets/control.png" alt="" />
+              <div><b>Régie</b><span>Appareils connectés, thème, affichage, navigation, playlist.</span><code>createScreenHub</code></div>
+            </a>
+            <a class="app app-device" href="./device.html?name=%C3%89cran%20A&amp;id=ecran-a&amp;tags=hall" target="_blank" rel="noopener">
+              <div class="device-glyph" aria-hidden="true"><span data-logo></span></div>
+              <div><b>Écran ↗</b><span>Une page d'affichage, à ouvrir dans un nouvel onglet ou sur un autre appareil.</span><code>createScreenDevice</code></div>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <section class="section cta">
+        <div class="wrap cta-inner">
+          <h2>Prêt à composer vos écrans ?</h2>
+          <p>Installation, concepts, référence de l'API et exemples à copier-coller.</p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="./docs.html">Lire la documentation</a>
+            <a class="btn" href="https://github.com/alexandre-plana/multi-screen">Code source</a>
+          </div>
+        </div>
+      </section>
     </main>
+
+    <footer class="site-footer">
+      <div class="wrap">
+        <a class="brand" href="./index.html"><span data-logo></span>multi-screen</a>
+        <span>Licence MIT · TypeScript · dockview 4 et plus</span>
+        <span class="spacer" style="flex:1"></span>
+        <a href="./docs.html">Documentation</a>
+        <a href="https://github.com/alexandre-plana/multi-screen">GitHub</a>
+      </div>
+    </footer>
+    <script type="module" src="./home.ts"></script>
   </body>
 </html>

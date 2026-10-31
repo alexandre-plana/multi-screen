@@ -1,0 +1,618 @@
+<!doctype html>
+<html lang="fr" class="theme-auto">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Documentation · multi-screen</title>
+    <meta name="description" content="Documentation de multi-screen : installation, concepts, référence de l'API et exemples à copier-coller." />
+    <link rel="stylesheet" href="./site.css" />
+    <link rel="stylesheet" href="./docs.css" />
+  </head>
+  <body>
+    <header class="site-nav">
+      <div class="wrap">
+        <a class="brand" href="./index.html"><span data-logo></span>multi-screen</a>
+        <nav aria-label="Principale">
+          <a href="./index.html#demo">Démo</a>
+          <a href="./docs.html" aria-current="page">Documentation</a>
+          <a href="./manager.html">Écrans</a>
+          <a href="./editor.html">Éditeur</a>
+          <a href="./control.html">Régie</a>
+        </nav>
+        <span class="spacer"></span>
+        <a class="gh" href="https://github.com/alexandre-plana/multi-screen">GitHub</a>
+      </div>
+    </header>
+
+    <div class="docs">
+      <aside class="toc" aria-label="Sommaire">
+        <input type="search" id="toc-filter" placeholder="Filtrer…" aria-label="Filtrer le sommaire" />
+        <nav id="toc"></nav>
+      </aside>
+
+      <article class="content" id="content">
+        <!-- ===================================================== -->
+        <section id="introduction">
+          <span class="eyebrow">Documentation</span>
+          <h1>multi-screen</h1>
+          <p class="intro">
+            multi-screen décrit un écran comme une <strong>donnée JSON</strong> : un ensemble de panneaux <a href="https://dockview.dev">dockview</a>, un thème et des réglages d'affichage.
+            Ses routes se créent à l'exécution. Une régie (<code>ScreenHub</code>) l'envoie aux appareils (<code>ScreenDevice</code>), le met à jour par patch et règle à distance leur thème et leur affichage.
+          </p>
+          <div class="callout">
+            <b>Pour qui ?</b> Affichage dynamique, murs d'écrans, salles de contrôle, bornes, tableaux de bord partagés, seconds écrans : partout où une composition de panneaux doit être créée, stockée et diffusée.
+          </div>
+        </section>
+
+        <!-- ===================================================== -->
+        <section id="installation">
+          <h2>Installation</h2>
+          <textarea class="src" data-lang="bash" hidden>
+            npm install multi-screen dockview
+          </textarea>
+          <p>Le paquet est en ESM et livré avec ses types. <code>dockview</code> (version 4 ou plus) n'est nécessaire que pour l'affichage ; <code>react</code>, <code>react-dom</code> et <code>ws</code> sont facultatifs.</p>
+          <table>
+            <thead><tr><th>Point d'entrée</th><th>Contenu</th><th>Dépendances</th></tr></thead>
+            <tbody>
+              <tr><td><code>multi-screen</code></td><td>modèle, store, routeur, régie, appareil, transports, liens, playlists</td><td><code>history</code>, <code>path-to-regexp</code></td></tr>
+              <tr><td><code>multi-screen/dockview</code></td><td>rendu, registre de panneaux, thèmes, affichage, éditeur, gestionnaire</td><td><code>dockview</code></td></tr>
+              <tr><td><code>multi-screen/react</code></td><td><code>reactPanel</code>, <code>ScreenOutletView</code>, hooks</td><td><code>react</code>, <code>react-dom</code></td></tr>
+              <tr><td><code>multi-screen/server</code></td><td>relais WebSocket, commande <code>multi-screen-relay</code></td><td><code>ws</code> ou tout serveur WebSocket</td></tr>
+            </tbody>
+          </table>
+          <p>Importez une fois la feuille de style de dockview dans l'application qui affiche des écrans :</p>
+          <textarea class="src" data-lang="ts" hidden>
+            import 'dockview/dist/styles/dockview.css';
+          </textarea>
+        </section>
+
+        <!-- ===================================================== -->
+        <section id="demarrage">
+          <h2>Démarrage rapide</h2>
+          <p>Deux pages : un <strong>appareil</strong> qui affiche ce qu'on lui envoie, et une <strong>régie</strong> qui compose et pilote. Elles communiquent ici par <code>BroadcastChannel</code> : ouvrez-les dans deux onglets du même navigateur.</p>
+          <h3>1. L'appareil</h3>
+          <textarea class="src" data-lang="ts" data-title="device.ts" hidden>
+            import 'dockview/dist/styles/dockview.css';
+            import { broadcastChannelTransport, createScreenDevice, createScreenRouter, hashRouter } from 'multi-screen';
+            import { createPanelRegistry, createScreenOutlet, registerBuiltinPanels } from 'multi-screen/dockview';
+
+            const registry = registerBuiltinPanels(createPanelRegistry());
+
+            const device = createScreenDevice({
+              transport: broadcastChannelTransport(),
+              router: createScreenRouter({ adapter: hashRouter() }),
+              info: { name: 'Hall d’accueil', tags: ['hall'] },
+            });
+
+            createScreenOutlet(document.getElementById('app')!, {
+              registry,
+              router: device.router,
+              device, // applique le thème, l'affichage et « identifier »
+            });
+          </textarea>
+          <h3>2. La régie</h3>
+          <textarea class="src" data-lang="ts" data-title="control.ts" hidden>
+            import { broadcastChannelTransport, createScreenHub } from 'multi-screen';
+
+            const hub = createScreenHub({ transport: broadcastChannelTransport() });
+
+            hub.subscribe((event) => {
+              if (event.type === 'devices') console.table(event.devices.map((d) => [d.info.name, d.online, d.state.screenId]));
+            });
+
+            hub.store.put({
+              id: 'accueil',
+              title: 'Accueil',
+              route: '/accueil',
+              theme: { base: 'abyss' },
+              display: { hideTabs: true },
+              panels: [
+                { id: 'titre', component: 'ms:text', params: { text: 'Bienvenue' } },
+                { id: 'heure', component: 'ms:clock', position: { referencePanel: 'titre', direction: 'below' } },
+              ],
+            });
+
+            const result = await hub.show('tag:hall', 'accueil');
+            console.log(result.acks, result.missing); // qui a reçu, qui n'a pas répondu
+          </textarea>
+          <div class="live" id="live-quick">
+            <div class="live-head"><span class="live-dot"></span>Exemple en direct · une régie et un appareil sur un bus mémoire</div>
+          </div>
+        </section>
+
+        <!-- ===================================================== -->
+        <section id="ecran">
+          <h2>L'écran (<code>ScreenDefinition</code>)</h2>
+          <p>Un écran est un objet JSON. Il traverse un socket, une URL ou un <code>localStorage</code> sans adaptation, se compare et se modifie par patch.</p>
+          <table>
+            <thead><tr><th>Champ</th><th>Type</th><th>Rôle</th></tr></thead>
+            <tbody>
+              <tr><td><code>id</code></td><td><code>string</code></td><td>Identifiant (lettres, chiffres, <code>. _ : -</code>, 128 caractères au plus).</td></tr>
+              <tr><td><code>title</code></td><td><code>string?</code></td><td>Titre lisible.</td></tr>
+              <tr><td><code>route</code></td><td><code>string?</code></td><td>Motif de route (<code>/hall/:zone</code>), créé sur l'appareil qui reçoit l'écran.</td></tr>
+              <tr><td><code>panels</code></td><td><code>PanelSpec[]?</code></td><td>Disposition déclarative, écrite à la main.</td></tr>
+              <tr><td><code>layout</code></td><td><code>SerializedLayout?</code></td><td>Disposition exacte (sortie de <code>DockviewApi.toJSON()</code>) ; l'emporte sur <code>panels</code>.</td></tr>
+              <tr><td><code>theme</code></td><td><code>ThemeSpec?</code></td><td>Thème par défaut de l'écran.</td></tr>
+              <tr><td><code>display</code></td><td><code>DisplaySpec?</code></td><td>Affichage par défaut (résolution, rotation…).</td></tr>
+              <tr><td><code>meta</code></td><td><code>object?</code></td><td>Données libres, jamais interprétées.</td></tr>
+              <tr><td><code>version</code>, <code>updatedAt</code></td><td></td><td>Gérés par le store.</td></tr>
+            </tbody>
+          </table>
+          <h3>Panneaux déclaratifs</h3>
+          <p>Chaque panneau se place par rapport à un autre : <code>left</code>, <code>right</code>, <code>above</code>, <code>below</code>, ou <code>within</code> pour un onglet du même groupe. Sans <code>position</code>, il se place à droite du précédent.</p>
+          <textarea class="src" data-lang="ts" hidden>
+            const tableau: ScreenDefinition = {
+              id: 'ventes',
+              title: 'Tableau des ventes',
+              route: '/tableaux/ventes',
+              panels: [
+                { id: 'ca', component: 'kpi', title: "Chiffre d'affaires", params: { value: 128400, unit: '€' } },
+                { id: 'commandes', component: 'kpi', params: { value: 342 }, position: { referencePanel: 'ca', direction: 'right' } },
+                { id: 'semaine', component: 'histogramme', params: { values: [12, 18, 9, 22] }, position: { referencePanel: 'ca', direction: 'below' }, initialHeight: 240 },
+                { id: 'notes', component: 'ms:text', params: { text: 'Notes' }, position: { referencePanel: 'semaine', direction: 'within' } },
+              ],
+            };
+          </textarea>
+          <h3>Bac à sable</h3>
+          <p>Modifiez le JSON : l'écran est validé puis rendu. Changer seulement des paramètres met à jour les panneaux sans les recréer.</p>
+          <div class="live" id="live-sandbox">
+            <div class="live-head"><span class="live-dot"></span>Exemple en direct · <code>validateScreen</code> + <code>mountScreen</code></div>
+          </div>
+        </section>
+
+        <!-- ===================================================== -->
+        <section id="panneaux">
+          <h2>Panneaux</h2>
+          <p>Un panneau est une fonction qui dessine dans <code>element</code>. Elle peut renvoyer <code>update</code> (nouveaux paramètres sans recréation), <code>dispose</code>, <code>onShow</code>, <code>onHide</code>, <code>layout</code>.</p>
+          <textarea class="src" data-lang="ts" hidden>
+            import { createPanelRegistry, registerBuiltinPanels } from 'multi-screen/dockview';
+
+            const registry = registerBuiltinPanels(createPanelRegistry());
+
+            registry.register<{ ville: string; temperature: number }>(
+              'meteo',
+              ({ element, params, api }) => {
+                const render = (p: typeof params) => (element.textContent = `${p.ville} : ${p.temperature} °C`);
+                render(params);
+                return {
+                  update: render,          // sinon le panneau est recréé à chaque changement
+                  dispose: () => {},       // timers, abonnements…
+                };
+              },
+              { label: 'Météo', defaults: { ville: 'Lyon', temperature: 14 } }, // utilisés par l'éditeur
+            );
+          </textarea>
+          <h3>React</h3>
+          <textarea class="src" data-lang="tsx" hidden>
+            import { reactPanel, type PanelProps } from 'multi-screen/react';
+
+            function Graphique({ params }: PanelProps<{ titre: string; valeurs: number[] }>) {
+              return <figure><figcaption>{params.titre}</figcaption>{/* … */}</figure>;
+            }
+
+            registry.register('graphique', reactPanel(Graphique), { label: 'Graphique', defaults: { titre: 'Ventes', valeurs: [] } });
+          </textarea>
+          <h3>Web Components (Lit, Vue, Svelte, Angular Elements)</h3>
+          <textarea class="src" data-lang="ts" hidden>
+            import { elementPanel } from 'multi-screen/dockview';
+
+            // Les paramètres autorisés deviennent des propriétés de l'élément.
+            registry.register('carte', elementPanel('ma-carte', { allow: ['latitude', 'longitude', 'zoom'] }));
+          </textarea>
+          <h3>Panneaux intégrés</h3>
+          <p>Utilisables sans livrer de code aux appareils. Leur contenu est toujours posé en texte ou en attributs, jamais en HTML.</p>
+          <table>
+            <thead><tr><th>Composant</th><th>Paramètres</th></tr></thead>
+            <tbody>
+              <tr><td><code>ms:text</code></td><td><code>text</code>, <code>size</code>, <code>align</code>, <code>color</code>, <code>background</code></td></tr>
+              <tr><td><code>ms:image</code></td><td><code>src</code>, <code>alt</code>, <code>fit</code></td></tr>
+              <tr><td><code>ms:iframe</code></td><td><code>src</code> (http/https), <code>sandbox</code>, <code>allow</code>, <code>title</code></td></tr>
+              <tr><td><code>ms:clock</code></td><td><code>timeZone</code>, <code>locale</code>, <code>seconds</code>, <code>size</code></td></tr>
+              <tr><td><code>ms:color</code></td><td><code>color</code></td></tr>
+            </tbody>
+          </table>
+          <p>Libellés français pour les palettes : <code>registerBuiltinPanels(registry, { labels: builtinPanelLabelsFr })</code>. Un composant inconnu affiche un message explicite (<code>registry.setFallback(factory)</code> pour le personnaliser).</p>
+        </section>
+
+        <!-- ===================================================== -->
+        <section id="routeur">
+          <h2>Routeur dynamique</h2>
+          <p><code>ScreenRouter</code> associe des adresses à des écrans. Ses routes s'ajoutent, se remplacent (même <code>id</code>) et se retirent pendant l'exécution ; l'écran affiché suit immédiatement.</p>
+          <textarea class="src" data-lang="ts" hidden>
+            import { browserRouter, createScreenRouter, hashRouter, memoryRouter } from 'multi-screen';
+
+            const router = createScreenRouter({
+              adapter: hashRouter(),        // browserRouter() · hashRouter() · memoryRouter('/') · le vôtre
+              basePath: '',                 // préfixe retiré avant la correspondance
+              screenRoutePrefix: '/screens' // route générique /screens/:screenId (false pour la désactiver)
+            });
+
+            const retirer = router.addRoute({ path: '/hall/:zone', resolve: ({ zone }) => `hall-${zone}` });
+            router.addRoute({ id: 'principal', path: '/', screenId: 'accueil' });      // même id : remplace
+            router.addRoute({ path: '/fichiers/*chemin', screenId: 'explorateur' });  // attrape-tout, essayé en dernier
+            router.setRoutes(routesDuServeur, { replaceAll: true });
+
+            router.match('/hall/nord');          // { screenId: 'hall-nord', params: { zone: 'nord' }, route }
+            router.navigateToScreen('accueil');
+            router.hrefFor('hall', { zone: 'sud' });
+            router.subscribe((e) => e.type === 'navigate' && console.log(e.match?.screenId));
+            retirer();
+          </textarea>
+          <p>Ordre de correspondance : <code>priority</code> décroissante, puis les routes sans attrape-tout, puis le moins de paramètres, puis l'ordre d'ajout. Syntaxe des motifs : celle de <code>path-to-regexp</code> 8 (<code>:param</code>, <code>*splat</code>, <code>{/:optionnel}</code>).</p>
+          <div class="live" id="live-router">
+            <div class="live-head"><span class="live-dot"></span>Exemple en direct · tapez une adresse</div>
+          </div>
+          <h3>Brancher votre routeur</h3>
+          <p>Un adaptateur a trois membres. Exemple avec un <em>data router</em> React Router :</p>
+          <textarea class="src" data-lang="ts" hidden>
+            import type { RouterAdapter } from 'multi-screen';
+
+            const adapter: RouterAdapter = {
+              get location() { return reactRouter.state.location; },
+              navigate: (path, options) => void reactRouter.navigate(path, { replace: options?.replace }),
+              subscribe: (listener) => reactRouter.subscribe((state) => listener(state.location)),
+            };
+
+            const router = createScreenRouter({ adapter, basePath: '/ecrans' });
+          </textarea>
+        </section>
+
+        <!-- ===================================================== -->
+        <section id="regie">
+          <h2>Régie et appareils</h2>
+          <p>La régie (<code>ScreenHub</code>) découvre les appareils et leur envoie des commandes. Chaque commande renvoie un <code>CommandResult</code> : appareils attendus, accusés de réception, appareils muets.</p>
+          <table>
+            <thead><tr><th>Méthode</th><th>Effet</th></tr></thead>
+            <tbody>
+              <tr><td><code>show(cible, écran | id, { navigate?, params? })</code></td><td>Stocke l'écran sur l'appareil, crée sa route, l'affiche.</td></tr>
+              <tr><td><code>update(id, patch | (écran) =&gt; écran)</code></td><td>Modifie l'écran de la régie et le propage : patch aux appareils à jour, écran complet aux autres.</td></tr>
+              <tr><td><code>patch(cible, id, patch, version?)</code></td><td>Envoie un JSON Merge Patch brut.</td></tr>
+              <tr><td><code>remove(cible, id)</code></td><td>Retire l'écran et sa route.</td></tr>
+              <tr><td><code>navigate(cible, chemin)</code></td><td>Navigation du routeur de l'appareil.</td></tr>
+              <tr><td><code>setTheme(cible, thème | null)</code></td><td>Surcharge de thème de l'appareil.</td></tr>
+              <tr><td><code>setDisplay(cible, affichage | null, { merge? })</code></td><td>Surcharge d'affichage de l'appareil.</td></tr>
+              <tr><td><code>identify(cible, ms?)</code></td><td>Affiche le nom de l'appareil en grand.</td></tr>
+              <tr><td><code>command(cible, nom, données?)</code></td><td>Commande applicative, reçue en évènement <code>custom</code>.</td></tr>
+              <tr><td><code>devices()</code>, <code>device(id)</code>, <code>discover()</code></td><td>Appareils connus, leur état (écran affiché, chemin, écrans détenus).</td></tr>
+            </tbody>
+          </table>
+          <p><strong>Cibles</strong> : un id d'appareil, <code>'tag:hall'</code>, <code>'*'</code>, ou une liste.</p>
+          <textarea class="src" data-lang="ts" hidden>
+            const device = createScreenDevice({
+              transport,
+              info: { id: 'borne-12', name: 'Borne entrée', tags: ['hall', 'portrait'] },
+              router,
+              persistOverrides: 'ecran:reglages',      // thème et affichage gardés au redémarrage
+              accept: (message) => message.from === 'regie-principale', // autorisation
+              deny: ['route/navigate'],                 // commandes refusées
+              heartbeatMs: 15_000,
+            });
+
+            device.subscribe((event) => {
+              if (event.type === 'custom' && event.name === 'recharger') location.reload();
+              if (event.type === 'error') console.warn(event.error);
+            });
+
+            await hub.update('ventes', { title: 'Ventes du jour' });            // patch
+            await hub.update('ventes', (s) => ({ ...s, theme: { base: 'nord' } })); // fonction
+            await hub.setDisplay('borne-12', { rotation: 90 }, { merge: true });
+            await hub.command('tag:hall', 'recharger');
+          </textarea>
+          <div class="callout">
+            <b>Sans navigateur.</b> <code>ScreenHub</code> fonctionne dans Node, un worker ou une fonction serveur : un planificateur peut piloter vos écrans à travers le relais WebSocket.
+          </div>
+        </section>
+
+        <!-- ===================================================== -->
+        <section id="transports">
+          <h2>Transports</h2>
+          <table>
+            <thead><tr><th>Transport</th><th>Portée</th></tr></thead>
+            <tbody>
+              <tr><td><code>broadcastChannelTransport(nom?)</code></td><td>Onglets et fenêtres d'un même navigateur.</td></tr>
+              <tr><td><code>webSocketTransport({ url })</code></td><td>Réseau, avec reconnexion et file d'attente expirée.</td></tr>
+              <tr><td><code>postMessageTransport({ target, targetOrigin })</code></td><td>Iframe, popup.</td></tr>
+              <tr><td><code>createMemoryBus().connect()</code></td><td>Même page : tests, aperçus.</td></tr>
+              <tr><td><code>signedTransport(transport, { secret })</code></td><td>Enveloppe : signature HMAC-SHA256 et anti-rejeu.</td></tr>
+            </tbody>
+          </table>
+          <h3>Réseau : le relais WebSocket</h3>
+          <textarea class="src" data-lang="bash" hidden>
+            npm install ws
+            npx multi-screen-relay --port 8787
+          </textarea>
+          <textarea class="src" data-lang="ts" hidden>
+            import { signedTransport, webSocketTransport } from 'multi-screen';
+
+            const transport = signedTransport(
+              webSocketTransport({ url: 'wss://ecrans.example.com/?room=magasin-12' }),
+              { secret: secretDuSite },
+            );
+          </textarea>
+          <p>Intégré à votre serveur (Express, Fastify, Deno, Bun…) :</p>
+          <textarea class="src" data-lang="ts" data-title="server.ts" hidden>
+            import { WebSocketServer } from 'ws';
+            import { attachWebSocketServer, createRelay } from 'multi-screen/server';
+
+            attachWebSocketServer(
+              new WebSocketServer({ server: httpServer }),
+              createRelay({ authorize: (message, connection) => jetonValide(connection.room, message) }),
+            );
+          </textarea>
+          <h3>Écrire un transport</h3>
+          <textarea class="src" data-lang="ts" hidden>
+            import { isEnvelope, type Transport } from 'multi-screen';
+
+            function mqttTransport(client: MqttClient, topic: string): Transport {
+              const listeners = new Set<(m: any) => void>();
+              client.subscribe(topic);
+              client.on('message', (_t, payload) => {
+                const message = JSON.parse(payload.toString());
+                if (isEnvelope(message)) listeners.forEach((l) => l(message));
+              });
+              return {
+                send: (message) => client.publish(topic, JSON.stringify(message)),
+                subscribe: (l) => (listeners.add(l), () => listeners.delete(l)),
+              };
+            }
+          </textarea>
+        </section>
+
+        <!-- ===================================================== -->
+        <section id="themes">
+          <h2>Thèmes</h2>
+          <p>Un thème s'applique à deux niveaux : dans l'écran (pour tous), et par appareil (<code>hub.setTheme</code>), qui l'emporte.</p>
+          <textarea class="src" data-lang="ts" hidden>
+            const theme: ThemeSpec = {
+              base: 'githubDark',                 // un thème dockview, par son nom
+              colorScheme: 'dark',
+              gap: 4,                             // espace entre groupes, en px
+              variables: {                        // n'importe quelle variable CSS
+                '--dv-background-color': '#0b0e14',
+                '--dv-activegroup-visiblepanel-tab-color': '#5b8cff',
+                '--mon-accent': '#38d6f5',        // les vôtres, pour vos panneaux
+              },
+              className: 'charte-magasin',
+            };
+
+            import { registerTheme, themeNames } from 'multi-screen/dockview';
+            registerTheme('charte', { name: 'charte', className: 'dockview-theme-charte' });
+          </textarea>
+          <p>Thèmes disponibles dans cette version de dockview :</p>
+          <div class="theme-list" id="theme-list"></div>
+        </section>
+
+        <!-- ===================================================== -->
+        <section id="affichage">
+          <h2>Affichage</h2>
+          <table>
+            <thead><tr><th>Champ</th><th>Effet</th></tr></thead>
+            <tbody>
+              <tr><td><code>resolution</code>, <code>fit</code></td><td>Mise en page calculée à une taille virtuelle (<code>{ width: 1920, height: 1080 }</code>), ajustée par <code>contain</code>, <code>fill</code> ou <code>none</code>.</td></tr>
+              <tr><td><code>rotation</code></td><td><code>0</code>, <code>90</code>, <code>180</code>, <code>270</code> : bornes en portrait.</td></tr>
+              <tr><td><code>scale</code></td><td>Zoom manuel.</td></tr>
+              <tr><td><code>hideTabs</code>, <code>locked</code></td><td>Sans onglets ; disposition figée (pas de glisser-déposer ni de redimensionnement).</td></tr>
+              <tr><td><code>cursor: 'none'</code>, <code>background</code></td><td>Curseur caché ; fond derrière la mise en page.</td></tr>
+              <tr><td><code>fullscreen</code>, <code>wakeLock</code></td><td>Plein écran (refus signalé par <code>onDisplayError</code>) ; écran maintenu allumé.</td></tr>
+            </tbody>
+          </table>
+          <p>Essayez sur le bac à sable : les boutons ci-dessous appliquent une surcharge d'affichage à la vue.</p>
+          <div class="live" id="live-display">
+            <div class="live-head"><span class="live-dot"></span>Exemple en direct · <code>view.setDisplay(…)</code></div>
+          </div>
+        </section>
+
+        <!-- ===================================================== -->
+        <section id="partage">
+          <h2>Liens de partage</h2>
+          <p>Un écran entier tient dans une URL, compressée et placée dans le fragment (jamais envoyé au serveur) : un QR code suffit.</p>
+          <textarea class="src" data-lang="ts" hidden>
+            import { createShareUrl, decodeScreen } from 'multi-screen';
+
+            const url = await createShareUrl(screen, { baseUrl: 'https://ecrans.example.com/device.html' });
+            // → https://ecrans.example.com/device.html#/share/z.jVHBbsIwDP0V…
+
+            // Côté appareil : validé, limité à 1 Mo une fois décompressé.
+            router.addRoute({ id: 'share', path: '/share/:payload', priority: 100 });
+            const screen = await decodeScreen(String(router.current?.params.payload));
+            device.show(screen);
+          </textarea>
+          <div class="live" id="live-share">
+            <div class="live-head"><span class="live-dot"></span>Exemple en direct · le lien de l'écran du bac à sable</div>
+          </div>
+        </section>
+
+        <!-- ===================================================== -->
+        <section id="editeur">
+          <h2>Éditeur et gestionnaire</h2>
+          <p><code>createScreenEditor</code> compose des écrans à partir de la palette des panneaux enregistrés ; <code>createScreenManager</code> gère tous les écrans créés. Les deux partagent ici le même store : enregistrez dans l'éditeur, la miniature se met à jour dans le gestionnaire.</p>
+          <textarea class="src" data-lang="ts" hidden>
+            import { createScreenEditor, createScreenManager, editorLabelsFr, managerLabelsFr } from 'multi-screen/dockview';
+
+            const editor = createScreenEditor(document.getElementById('editeur')!, {
+              registry,
+              store: hub.store,
+              labels: editorLabelsFr,
+              autoSaveMs: 1500,
+              actions: [{ label: 'Diffuser', run: (screen) => hub.show('*', screen) }],
+            });
+
+            createScreenManager(document.getElementById('ecrans')!, {
+              store: hub.store,
+              registry,                               // miniatures
+              hub,                                    // diffusion, « affiché sur … »
+              onEdit: (id) => editor.open(id),
+              shareBaseUrl: 'https://ecrans.example.com/device.html',
+              labels: managerLabelsFr,
+            });
+          </textarea>
+          <div class="live live-tall" id="live-editor">
+            <div class="live-head"><span class="live-dot"></span>Exemple en direct · <code>createScreenEditor</code> — glissez un panneau de la palette sur le canevas</div>
+          </div>
+          <div class="live" id="live-manager">
+            <div class="live-head"><span class="live-dot"></span>Exemple en direct · <code>createScreenManager</code></div>
+          </div>
+        </section>
+
+        <!-- ===================================================== -->
+        <section id="react">
+          <h2>React</h2>
+          <textarea class="src" data-lang="tsx" hidden>
+            import { ScreenOutletView, useDevices, useRouteMatch, useScreens } from 'multi-screen/react';
+
+            function Regie({ hub }: { hub: ScreenHub }) {
+              const devices = useDevices(hub);
+              const screens = useScreens(hub.store);
+              return (
+                <ul>
+                  {devices.map((d) => (
+                    <li key={d.info.id}>
+                      {d.info.name} — {d.state.screenId ?? 'aucun écran'}
+                      <button onClick={() => hub.show(d.info.id, screens[0]!.id)}>Envoyer</button>
+                    </li>
+                  ))}
+                </ul>
+              );
+            }
+
+            function Appareil({ device, registry }) {
+              return <ScreenOutletView router={device.router} device={device} registry={registry} style={{ height: '100vh' }} />;
+            }
+          </textarea>
+        </section>
+
+        <!-- ===================================================== -->
+        <section id="persistance">
+          <h2>Stockage et persistance</h2>
+          <textarea class="src" data-lang="ts" hidden>
+            import { createScreenStore, webStorage, type ScreenStorage } from 'multi-screen';
+
+            // localStorage, synchronisé entre onglets.
+            const store = createScreenStore({ storage: webStorage('mes-ecrans') });
+            await store.ready;
+
+            // Ou votre serveur.
+            const api: ScreenStorage = {
+              load: () => fetch('/api/ecrans').then((r) => r.json()),
+              save: (screens) => void fetch('/api/ecrans', { method: 'PUT', body: JSON.stringify(screens) }),
+              subscribe: (listener) => {
+                const source = new EventSource('/api/ecrans/flux');
+                source.onmessage = (e) => listener(JSON.parse(e.data));
+                return () => source.close();
+              },
+            };
+
+            store.subscribe((e) => console.log(e.type, 'screen' in e ? e.screen.id : ''));
+            store.put(screen);                 // version 1, puis 2, 3… à chaque changement réel
+            store.patch('ventes', { title: 'Ventes' });
+          </textarea>
+        </section>
+
+        <!-- ===================================================== -->
+        <section id="playlists">
+          <h2>Playlists</h2>
+          <textarea class="src" data-lang="ts" hidden>
+            import { createPlaylist, type PlaylistItem } from 'multi-screen';
+
+            const playlist = createPlaylist({
+              router: device.router,
+              items: [
+                { screenId: 'accueil', durationMs: 20_000 },
+                { screenId: 'promo', durationMs: 10_000, params: { n: '2' } },
+              ],
+            });
+
+            // Pilotée depuis la régie par une commande libre :
+            device.subscribe((e) => e.type === 'custom' && e.name === 'playlist' && playlist.setItems(e.data as PlaylistItem[]));
+            await hub.command('tag:hall', 'playlist', items);
+          </textarea>
+        </section>
+
+        <!-- ===================================================== -->
+        <section id="securite">
+          <h2>Sécurité</h2>
+          <ul class="checks">
+            <li>Tout ce qui arrive du réseau est <strong>validé</strong> (<code>validateScreen</code>, motifs de route compris) ; un échec produit un accusé <code>ok: false</code>.</li>
+            <li>Les panneaux intégrés n'insèrent jamais de HTML ; <code>ms:iframe</code> est en bac à sable et n'accepte que <code>http(s)</code>.</li>
+            <li><code>elementPanel</code> : préférez <code>allow</code> ; sans lui, <code>innerHTML</code>, <code>on*</code>, <code>src</code>, <code>href</code>… sont écartés.</li>
+            <li>Points d'autorisation : <code>accept</code> et <code>deny</code> (appareil), <code>acceptDevice</code> (régie), <code>authorize</code> (relais).</li>
+            <li><code>signedTransport</code> écarte les pairs sans le secret et les messages rejoués ; le secret est connu de chaque appareil, il ne protège pas d'un appareil compromis.</li>
+            <li>Liens de partage dans le fragment de l'URL, limités à 1 Mo décompressés.</li>
+          </ul>
+        </section>
+
+        <!-- ===================================================== -->
+        <section id="protocole">
+          <h2>Protocole</h2>
+          <p>Messages JSON (<code>ms: 1</code>), un par trame WebSocket. Un appareil peut être écrit dans un autre langage : voir <a href="https://github.com/alexandre-plana/multi-screen/blob/main/docs/PROTOCOL.md">PROTOCOL.md</a>.</p>
+          <textarea class="src" data-lang="json" hidden>
+            {
+              "ms": 1,
+              "id": "0c3f2b8e-…",
+              "type": "screen/patch",
+              "from": "hub",
+              "to": ["tv", "tag:hall"],
+              "ts": 1793462400000,
+              "payload": { "screenId": "ventes", "patch": { "layout": { "panels": { "ca": { "params": { "value": 131900 } } } } }, "version": 2 }
+            }
+          </textarea>
+          <table>
+            <thead><tr><th>Type</th><th>Sens</th><th>Effet</th></tr></thead>
+            <tbody>
+              <tr><td><code>hub/discover</code></td><td>régie → tous</td><td>Chaque appareil s'annonce.</td></tr>
+              <tr><td><code>device/hello</code>, <code>device/bye</code></td><td>appareil → tous</td><td>Présence et état (écrans détenus avec version et empreinte).</td></tr>
+              <tr><td><code>screen/show</code>, <code>screen/patch</code>, <code>screen/remove</code></td><td>régie → appareils</td><td>Écrans.</td></tr>
+              <tr><td><code>route/navigate</code>, <code>theme/set</code>, <code>display/set</code>, <code>device/identify</code>, <code>custom</code></td><td>régie → appareils</td><td>Pilotage.</td></tr>
+              <tr><td><code>ack</code></td><td>appareil → régie</td><td>Accusé de chaque commande.</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <!-- ===================================================== -->
+        <section id="recettes">
+          <h2>Recettes</h2>
+          <h3>Mur d'écrans sur une seule machine</h3>
+          <textarea class="src" data-lang="ts" hidden>
+            // Une fenêtre par moniteur, même origine : BroadcastChannel suffit.
+            for (const [i, position] of ['gauche', 'centre', 'droite'].entries()) {
+              open(`/device.html?id=mur-${i}&tags=mur#/mur/${position}`, `mur-${i}`, 'popup');
+            }
+            hub.store.put({ id: 'mur', route: '/mur/:position', display: { hideTabs: true, locked: true, cursor: 'none' }, panels });
+            await hub.show('tag:mur', 'mur', { navigate: false });
+          </textarea>
+          <h3>Borne portrait sur un écran paysage</h3>
+          <textarea class="src" data-lang="ts" hidden>
+            await hub.setDisplay('borne-12', {
+              rotation: 90,
+              resolution: { width: 1080, height: 1920 },
+              fit: 'contain',
+              hideTabs: true, locked: true, cursor: 'none', wakeLock: true,
+            });
+          </textarea>
+          <h3>Tableau de bord alimenté par un serveur Node</h3>
+          <textarea class="src" data-lang="ts" data-title="scheduler.mjs" hidden>
+            import { createScreenHub, webSocketTransport } from 'multi-screen';
+
+            const hub = createScreenHub({ transport: webSocketTransport({ url: 'ws://relais:8787/?room=usine' }) });
+            hub.store.put(tableauDeBord);
+
+            setInterval(async () => {
+              const mesures = await lireCapteurs();
+              await hub.update('tableau', { layout: { panels: { debit: { params: { value: mesures.debit } } } } });
+            }, 5000);
+          </textarea>
+        </section>
+      </article>
+    </div>
+
+    <footer class="site-footer">
+      <div class="wrap">
+        <a class="brand" href="./index.html"><span data-logo></span>multi-screen</a>
+        <span>Licence MIT</span>
+        <span class="spacer" style="flex:1"></span>
+        <a href="https://github.com/alexandre-plana/multi-screen">GitHub</a>
+      </div>
+    </footer>
+    <script type="module" src="./docs.ts"></script>
+  </body>
+</html>

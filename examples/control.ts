@@ -1,6 +1,9 @@
 import { createScreenHub, createScreenStore, createShareUrl, validateScreen, webStorage, type DeviceRecord, type DisplaySpec, type Rotation, type ScreenDefinition, type Target } from 'multi-screen';
 import { mountScreen, themeNames } from 'multi-screen/dockview';
 import { createDemoRegistry, presets, transportFromUrl } from './shared';
+import { mountLogo } from './site';
+
+mountLogo();
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 

@@ -42,14 +42,5 @@ select, input[type=text], input[type=number], textarea { background: var(--card)
 .empty-note { color: var(--muted); font-size: 13px; padding: 8px 0; }
 @media (max-width: 1000px) { .control { grid-template-columns: 1fr; grid-template-rows: auto; height: auto; } .col { border-right: 0; border-bottom: 1px solid var(--line); } }
 
-/* Demo panels */
-.kpi { display: flex; flex-direction: column; justify-content: center; height: 100%; padding: 1em 1.5em; font-family: system-ui, sans-serif; }
-.kpi-label { opacity: .7; font-size: 1.1em; }
-.kpi-value { font-size: 2.8em; font-weight: 700; font-variant-numeric: tabular-nums; }
-.kpi-trend[data-dir=up] { color: #4cc27f; }
-.kpi-trend[data-dir=down] { color: #ff7a6b; }
-.bars { display: flex; flex-direction: column; height: 100%; padding: 1em; box-sizing: border-box; }
-.bars-title { opacity: .8; margin-bottom: .5em; font-family: system-ui, sans-serif; }
-.bars svg { flex: 1; width: 100%; }
-.bars rect { fill: var(--demo-accent, #6a9cff); }
 .field > select, .field > input { min-width: 0; width: 100%; }
+

@@ -1,6 +1,9 @@
 import { createScreenHub, createScreenStore, webStorage } from 'multi-screen';
 import { createScreenManager, managerLabelsFr } from 'multi-screen/dockview';
 import { createDemoRegistry, presets, transportFromUrl } from './shared';
+import { mountLogo } from './site';
+
+mountLogo();
 
 // The same library as the editor and the control page (synchronised across tabs).
 const store = createScreenStore({ storage: webStorage('multi-screen-demo:library') });

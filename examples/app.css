@@ -1,0 +1,27 @@
+/* App pages (Écrans, Éditeur, Régie): the site's dark palette on top of demo.css. */
+:root {
+  color-scheme: dark;
+  --bg: #07090d; --fg: #e9edf3; --muted: #8b95a6; --card: #10141c; --line: rgba(148, 163, 184, 0.16); --accent: #5b8cff; --ok: #3ddc97; --ko: #ff6b6b;
+}
+html, body { height: 100%; }
+body { display: grid; grid-template-rows: auto minmax(0, 1fr); background: var(--bg); color: var(--fg); font: 14px/1.45 var(--font); }
+body > main, body > .control { min-height: 0; }
+button, select, input, textarea { font-family: var(--font); }
+button.primary { background: linear-gradient(180deg, #4b82ff, #2f6fde); border-color: rgba(255,255,255,.12); }
+.site-nav .wrap { max-width: none; }
+.site-nav .app-status { font: 12px var(--mono); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Editor and manager follow the site palette. */
+body .mse, body .msm {
+  --mse-bg: #07090d; --mse-fg: #e9edf3; --mse-muted: #8b95a6; --mse-card: #10141c; --mse-line: rgba(148, 163, 184, 0.16); --mse-accent: #5b8cff; --mse-danger: #ff6b6b;
+  --msm-bg: #07090d; --msm-fg: #e9edf3; --msm-muted: #8b95a6; --msm-card: #10141c; --msm-line: rgba(148, 163, 184, 0.16); --msm-accent: #5b8cff; --msm-danger: #ff6b6b; --msm-live: #3ddc97;
+  font-family: var(--font);
+}
+body .msm { min-height: 100%; }
+body .mse .mse-primary, body .msm .msm-primary { background: linear-gradient(180deg, #4b82ff, #2f6fde); border-color: rgba(255,255,255,.12); }
+
+/* Control page: its own toolbar sits under the site navigation. */
+.control { height: auto; min-height: 0; }
+.control > header h1 { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+.item, .preview, select, input[type=text], input[type=number], textarea, button { border-color: var(--line); }
+#manager { overflow: auto; }

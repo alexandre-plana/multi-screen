@@ -16,6 +16,7 @@
 <p align="center">
   <a href="#le-film"><strong>Le film</strong></a> ·
   <a href="https://alexandre-plana.github.io/multi-screen/">Démo en ligne</a> ·
+  <a href="https://alexandre-plana.github.io/multi-screen/docs.html">Documentation en ligne</a> ·
   <a href="#guide-dutilisation">Guide d'utilisation</a> ·
   <a href="docs/ARCHITECTURE.md">Architecture</a> ·
   <a href="docs/PROTOCOL.md">Protocole</a> ·
@@ -426,7 +427,7 @@ Les hooks s'appuient sur `useSyncExternalStore` : `useScreens`, `useScreen`, `us
 | --- | --- |
 | ![La régie de démonstration](docs/assets/control.png) | ![L'éditeur : palette, canevas et inspecteur](docs/assets/editor.png) |
 
-La démo ([en ligne](https://alexandre-plana.github.io/multi-screen/) ou `npm run dev`) réunit le gestionnaire, l'éditeur, la régie et deux appareils, reliés par BroadcastChannel.
+La démo ([en ligne](https://alexandre-plana.github.io/multi-screen/) ou `npm run dev`) comprend une page d’accueil avec une démonstration en direct, la [documentation](https://alexandre-plana.github.io/multi-screen/docs.html) avec ses exemples, le gestionnaire, l’éditeur, la régie et des appareils, reliés par BroadcastChannel.
 
 ## Sécurité
 
