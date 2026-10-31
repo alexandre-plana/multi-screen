@@ -5,3 +5,6 @@ examples/dist/
 .DS_Store
 coverage/
 e2e/.output/
+motion/out/*.wav
+motion/out/cues.json
+motion/out/img/

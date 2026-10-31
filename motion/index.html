@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>multi-screen — film de démonstration</title>
+<style>
+  @font-face { font-family: 'Inter'; font-weight: 400; src: url('fonts/inter-latin-400-normal.woff2') format('woff2'); }
+  @font-face { font-family: 'Inter'; font-weight: 500; src: url('fonts/inter-latin-500-normal.woff2') format('woff2'); }
+  @font-face { font-family: 'Inter'; font-weight: 600; src: url('fonts/inter-latin-600-normal.woff2') format('woff2'); }
+  @font-face { font-family: 'IBM Plex Mono'; font-weight: 400; src: url('fonts/ibm-plex-mono-latin-400-normal.woff2') format('woff2'); }
+  @font-face { font-family: 'IBM Plex Mono'; font-weight: 500; src: url('fonts/ibm-plex-mono-latin-500-normal.woff2') format('woff2'); }
+  @font-face { font-family: 'IBM Plex Mono'; font-weight: 600; src: url('fonts/ibm-plex-mono-latin-600-normal.woff2') format('woff2'); }
+  html, body { margin: 0; background: #111317; color: #e6e9ef; font: 13px/1.4 Inter, system-ui, sans-serif; }
+  body.capture { background: #F6F7F9; }
+  .stage { display: grid; place-items: center; min-height: 100vh; gap: 12px; padding: 16px; box-sizing: border-box; }
+  canvas { width: min(100%, calc((100vh - 90px) * 16 / 9)); aspect-ratio: 16 / 9; display: block; background: #F6F7F9; }
+  body.capture canvas { width: 1920px; height: 1080px; }
+  body.capture .bar { display: none; }
+  .bar { display: flex; gap: 12px; align-items: center; width: min(100%, calc((100vh - 90px) * 16 / 9)); }
+  .bar button { font: inherit; background: #222832; color: inherit; border: 1px solid #303744; border-radius: 6px; padding: 6px 12px; cursor: pointer; min-width: 80px; }
+  .bar input { flex: 1; accent-color: #2F6FDE; }
+  .bar output { font-family: 'IBM Plex Mono', monospace; min-width: 70px; text-align: right; }
+  .bar .hint { color: #8b93a1; font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="stage">
+  <canvas id="c" width="1920" height="1080"></canvas>
+  <div class="bar">
+    <button id="play" type="button">Lecture</button>
+    <input id="scrub" type="range" min="0" max="60" step="0.01" value="0" aria-label="Position">
+    <output id="tc">00.00</output>
+    <span class="hint">Espace : lecture / pause</span>
+  </div>
+</div>
+<audio id="music" src="out/music.wav" preload="auto"></audio>
+<script src="data.js"></script>
+<script src="scene.js"></script>
+<script>
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  const params = new URLSearchParams(location.search);
+  if (params.has('capture')) document.body.classList.add('capture');
+
+  window.ready = (async () => {
+    const faces = ['400 16px Inter', '500 16px Inter', '600 16px Inter',
+      '400 16px "IBM Plex Mono"', '500 16px "IBM Plex Mono"', '600 16px "IBM Plex Mono"'];
+    await Promise.all(faces.map((f) => document.fonts.load(f, 'Aé0')));
+    await document.fonts.ready;
+    MS.render(ctx, Number(params.get('t') || 0));
+    return true;
+  })();
+
+  window.frameToPNG = (t) => { MS.render(ctx, t); return canvas.toDataURL('image/png'); };
+
+  // Lecteur de prévisualisation (hors capture). La musique sert d'horloge quand elle est chargée.
+  const audio = document.getElementById('music');
+  const scrub = document.getElementById('scrub');
+  const tc = document.getElementById('tc');
+  const playBtn = document.getElementById('play');
+  let playing = false, t0 = 0, base = 0;
+  const now = () => (audio.readyState >= 2 && !audio.error ? audio.currentTime : base + (performance.now() - t0) / 1000);
+  function show(t) { MS.render(ctx, t); scrub.value = t; tc.textContent = t.toFixed(2).padStart(5, '0'); }
+  function loop() { if (!playing) return; let t = now(); if (t >= MS.DURATION) { t = MS.DURATION; toggle(); } show(t); requestAnimationFrame(loop); }
+  function toggle() {
+    playing = !playing; playBtn.textContent = playing ? 'Pause' : 'Lecture';
+    if (playing) { base = Number(scrub.value) >= MS.DURATION ? 0 : Number(scrub.value); t0 = performance.now(); audio.currentTime = base; audio.play().catch(() => {}); loop(); }
+    else audio.pause();
+  }
+  playBtn.addEventListener('click', toggle);
+  scrub.addEventListener('input', () => { base = Number(scrub.value); t0 = performance.now(); audio.currentTime = base; show(base); });
+  addEventListener('keydown', (e) => { if (e.code === 'Space') { e.preventDefault(); toggle(); } });
+</script>
+</body>
+</html>
