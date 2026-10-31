@@ -2,8 +2,7 @@ name: CI
 
 on:
   push:
-    # `main` once it exists; the current default branch until then.
-    branches: [main, claude/compassionate-hypatia-fh85r6]
+    branches: [main]
   pull_request:
 
 jobs:
