@@ -156,10 +156,14 @@ export class ScreenView {
 
   /** Recomputes the stage geometry (called on resize). */
   layout(): void {
+    this.#layoutFor(this.#display);
+  }
+
+  #layoutFor(display: DisplaySpec): void {
     this.#mute();
     const width = this.root.clientWidth;
     const height = this.root.clientHeight;
-    const geometry = computeStage({ width, height }, this.#display);
+    const geometry = computeStage({ width, height }, display);
     this.stage.style.width = `${geometry.width}px`;
     this.stage.style.height = `${geometry.height}px`;
     this.stage.style.transform = geometry.transform;
@@ -190,6 +194,8 @@ export class ScreenView {
 
   #build(screen: ScreenDefinition): void {
     this.api.clear();
+    // Give dockview its size first: panels added to a zero-sized layout get skewed proportions.
+    this.#layoutFor(mergeDisplay(screen.display, this.#displayOverride));
     if (screen.layout) {
       this.api.fromJSON(screen.layout as unknown as SerializedDockview);
       return;
