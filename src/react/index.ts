@@ -1,4 +1,4 @@
-import { createElement, useEffect, useRef, useSyncExternalStore, type ComponentType, type CSSProperties } from 'react';
+import { createElement, useCallback, useEffect, useRef, useSyncExternalStore, type ComponentType, type CSSProperties } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { DockviewApi, DockviewPanelApi } from 'dockview';
 import type { DeviceRecord, ScreenHub } from '../core/hub.js';
@@ -56,19 +56,30 @@ export function ScreenOutletView({ className, style, onReady, ...options }: Scre
   return createElement('div', { ref, className, style: { width: '100%', height: '100%', ...style } });
 }
 
-function useSubscription<T>(subscribe: (cb: () => void) => () => void, read: () => T): T {
+/**
+ * Subscribes to an external source. The snapshot is memoised on its JSON
+ * form so that unchanged data keeps the same identity (no extra renders).
+ */
+function useSubscription<T>(source: object | undefined, subscribe: (cb: () => void) => () => void, read: () => T): T {
   const cache = useRef<{ value: T; key: string } | undefined>(undefined);
-  return useSyncExternalStore(subscribe, () => {
-    const value = read();
-    const key = JSON.stringify(value);
+  const readRef = useRef(read);
+  readRef.current = read;
+  // Re-subscribe only when the source changes, not on every render.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const stableSubscribe = useCallback(subscribe, [source]);
+  const getSnapshot = () => {
+    const value = readRef.current();
+    const key = JSON.stringify(value) ?? 'undefined';
     if (!cache.current || cache.current.key !== key) cache.current = { value, key };
     return cache.current.value;
-  });
+  };
+  return useSyncExternalStore(stableSubscribe, getSnapshot, getSnapshot);
 }
 
 /** Screens of a store, live. */
 export function useScreens(store: ScreenStore): ScreenDefinition[] {
   return useSubscription(
+    store,
     (cb) => store.subscribe(cb),
     () => store.list(),
   );
@@ -77,6 +88,7 @@ export function useScreens(store: ScreenStore): ScreenDefinition[] {
 /** One screen of a store, live. */
 export function useScreen(store: ScreenStore, id: string | undefined): ScreenDefinition | undefined {
   return useSubscription(
+    store,
     (cb) => store.subscribe(cb),
     () => (id ? store.get(id) : undefined),
   );
@@ -85,6 +97,7 @@ export function useScreen(store: ScreenStore, id: string | undefined): ScreenDef
 /** Devices known by a hub, live. */
 export function useDevices(hub: ScreenHub): DeviceRecord[] {
   return useSubscription(
+    hub,
     (cb) => hub.subscribe((event) => event.type === 'devices' && cb()),
     () => hub.devices(),
   );
@@ -93,6 +106,7 @@ export function useDevices(hub: ScreenHub): DeviceRecord[] {
 /** Current route match, live. */
 export function useRouteMatch(router: ScreenRouter): RouteMatch | undefined {
   return useSubscription(
+    router,
     (cb) => router.subscribe(cb),
     () => router.current,
   );
@@ -101,6 +115,7 @@ export function useRouteMatch(router: ScreenRouter): RouteMatch | undefined {
 /** Device state, live. */
 export function useDeviceState(device: ScreenDevice) {
   return useSubscription(
+    device,
     (cb) => device.subscribe((event) => event.type === 'state' && cb()),
     () => device.state,
   );
