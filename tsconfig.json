@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+    "types": [],
+    "paths": {
+      "multi-screen": ["./src/core/index.ts"],
+      "multi-screen/dockview": ["./src/dockview/index.ts"],
+      "multi-screen/react": ["./src/react/index.ts"],
+      "multi-screen/server": ["./src/server/index.ts"]
+    }
+  },
+  "include": ["src", "tests", "examples", "vitest.config.ts"]
+}
