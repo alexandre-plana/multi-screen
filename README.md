@@ -2,7 +2,7 @@
 
 **Composez des écrans à partir de panneaux [dockview](https://dockview.dev), créez leurs routes à l'exécution et pilotez-les à distance.**
 
-[Démo en ligne](https://alexandre-plana.github.io/multi-screen/) (après activation de GitHub Pages) · [Architecture](docs/ARCHITECTURE.md) · [Protocole](docs/PROTOCOL.md) · [English](docs/en/README.md)
+[Démo en ligne](https://alexandre-plana.github.io/multi-screen/) · [Architecture](docs/ARCHITECTURE.md) · [Protocole](docs/PROTOCOL.md) · [English](docs/en/README.md)
 
 TypeScript · sans framework (React en option) · licence MIT
 
