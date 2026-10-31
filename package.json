@@ -105,7 +105,7 @@
     "url": "git+https://github.com/alexandre-plana/multi-screen.git"
   },
   "bugs": "https://github.com/alexandre-plana/multi-screen/issues",
-  "homepage": "https://github.com/alexandre-plana/multi-screen#readme",
+  "homepage": "https://alexandre-plana.github.io/multi-screen/",
   "publishConfig": {
     "access": "public"
   }

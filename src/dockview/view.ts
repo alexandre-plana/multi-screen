@@ -214,7 +214,7 @@ export class ScreenView {
     if (previousClass) this.root.classList.remove(...previousClass.split(' ').filter(Boolean));
     if (spec?.className) this.root.classList.add(...spec.className.split(' ').filter(Boolean));
     this.root.dataset.msClass = spec?.className ?? '';
-    const scheme = spec?.colorScheme ?? resolveTheme(spec, this.#options.defaultTheme).colorScheme;
+    const scheme = spec?.colorScheme ?? (resolveTheme(spec, this.#options.defaultTheme) as { colorScheme?: 'light' | 'dark' }).colorScheme;
     if (scheme) this.root.style.colorScheme = scheme;
     this.root.dataset.theme = spec?.base ?? this.#options.defaultTheme ?? 'dark';
   }

@@ -106,3 +106,34 @@ export const builtinPanels = {
 export function registerBuiltinPanels(registry: PanelRegistry): PanelRegistry {
   return registry.registerAll(builtinPanels as Record<string, PanelFactory<any>>);
 }
+
+/**
+ * Wraps a custom element as a panel: params are assigned as properties on
+ * every update. Works with Lit, Stencil, Vue (`defineCustomElement`),
+ * Svelte (`customElement: true`), Angular Elements…
+ */
+export function elementPanel<P extends Record<string, unknown> = Record<string, unknown>>(
+  tagName: string,
+  options: { attributes?: boolean } = {},
+): PanelFactory<P> {
+  return ({ element, params, id, api }) => {
+    const el = document.createElement(tagName) as HTMLElement & Record<string, unknown>;
+    el.style.display = 'block';
+    el.style.width = '100%';
+    el.style.height = '100%';
+    el.dataset.panelId = id;
+    let previous: Record<string, unknown> = {};
+    const apply = (p: P) => {
+      for (const key of Object.keys(previous)) if (!(key in p)) el[key] = undefined;
+      for (const [key, value] of Object.entries(p)) {
+        el[key] = value;
+        if (options.attributes && (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean')) el.setAttribute(key, String(value));
+      }
+      previous = { ...p };
+    };
+    el.panelApi = api;
+    apply(params);
+    element.append(el);
+    return { update: apply };
+  };
+}

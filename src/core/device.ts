@@ -77,6 +77,20 @@ export class ScreenDevice {
       }),
     );
     for (const screen of this.store.list()) this.#syncRoute(screen);
+    // Viewport changes (rotation, window resize) are reported to hubs.
+    const win = globalThis as unknown as { addEventListener?: Window['addEventListener']; removeEventListener?: Window['removeEventListener'] };
+    if (typeof win.addEventListener === 'function' && !this.info.viewport) {
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const onResize = () => {
+        clearTimeout(timer);
+        timer = setTimeout(() => this.announce(), 300);
+      };
+      win.addEventListener('resize', onResize);
+      this.#cleanups.push(() => {
+        clearTimeout(timer);
+        win.removeEventListener?.('resize', onResize);
+      });
+    }
     const heartbeat = this.#options.heartbeatMs ?? 15_000;
     if (heartbeat > 0) this.#heartbeat = setInterval(() => this.announce(), heartbeat);
     this.announce();

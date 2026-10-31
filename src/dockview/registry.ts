@@ -136,7 +136,11 @@ class FactoryRenderer implements IContentRenderer {
   update(event: { params: Record<string, unknown> }): void {
     if (!this.#context) return;
     // dockview hands the full parameter set after `updateParameters`.
-    const params = { ...this.defaults, ...event.params };
+    const params: Record<string, unknown> = { ...this.defaults };
+    for (const [key, value] of Object.entries(event.params)) {
+      if (value === undefined) delete params[key];
+      else params[key] = value;
+    }
     this.#context.params = params;
     if (this.#instance && this.#instance.update) {
       this.#instance.update(params);
