@@ -13,6 +13,8 @@ export interface ScreenOutletOptions extends Omit<ScreenViewOptions, 'screen'> {
   device?: ScreenDevice;
   /** Rendered when the URL matches no stored screen. */
   notFound?: (element: HTMLElement, match: RouteMatch | undefined) => void;
+  /** A screen could not be rendered (invalid layout, failing panel…). Default: console.error. */
+  onError?: (error: unknown, screen: ScreenDefinition | undefined) => void;
   /** Called after each render. */
   onRender?: (screen: ScreenDefinition | undefined, match: RouteMatch | undefined) => void;
 }
@@ -45,7 +47,11 @@ export function createScreenOutlet(element: HTMLElement, options: ScreenOutletOp
       view.setTheme(device.themeOverride);
       view.setDisplay(device.displayOverride);
     }
-    view.render(screen);
+    try {
+      view.render(screen);
+    } catch (error) {
+      (options.onError ?? ((e) => console.error('multi-screen: cannot render screen', e)))(error, screen);
+    }
     notFoundEl?.remove();
     notFoundEl = undefined;
     if (!screen && match && options.notFound) {

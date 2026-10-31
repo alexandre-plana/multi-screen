@@ -239,7 +239,11 @@ export class ScreenDevice {
     existing?.();
     this.#routeCleanups.delete(id);
     if (screen?.route) {
-      this.#routeCleanups.set(id, this.router.addRoute({ id: `screen:${id}`, path: screen.route, screenId: id }));
+      try {
+        this.#routeCleanups.set(id, this.router.addRoute({ id: `screen:${id}`, path: screen.route, screenId: id }));
+      } catch (error) {
+        this.#events.emit({ type: 'error', error: error instanceof Error ? error : new Error(String(error)) });
+      }
     }
   }
 
@@ -252,6 +256,7 @@ export class ScreenDevice {
     this.#announceQueued = true;
     queueMicrotask(() => {
       this.#announceQueued = false;
+      if (!this.#started) return;
       const state = this.state;
       this.#events.emit({ type: 'state', state });
       this.announce();

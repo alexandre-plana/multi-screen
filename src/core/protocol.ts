@@ -82,16 +82,21 @@ export function isEnvelope(value: unknown): value is AnyEnvelope {
     typeof v.type === 'string' &&
     TYPES.has(v.type) &&
     typeof v.from === 'string' &&
+    isTarget(v.to) &&
     typeof v.payload === 'object' &&
     v.payload !== null
   );
+}
+
+function isTarget(to: unknown): boolean {
+  return to === undefined || typeof to === 'string' || (Array.isArray(to) && to.every((t) => typeof t === 'string'));
 }
 
 /** Whether a message addressed to `to` concerns the given device. */
 export function isTargeted(to: Target | undefined, device: Pick<DeviceInfo, 'id' | 'tags'>): boolean {
   if (to === undefined) return true;
   const targets = Array.isArray(to) ? to : [to];
-  return targets.some((t) => t === '*' || t === device.id || (t.startsWith('tag:') && (device.tags ?? []).includes(t.slice(4))));
+  return targets.some((t) => typeof t === 'string' && (t === '*' || t === device.id || (t.startsWith('tag:') && (device.tags ?? []).includes(t.slice(4)))));
 }
 
 /** Transport: moves envelopes between peers. Implementations must not echo a message back to its sender. */

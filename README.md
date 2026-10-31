@@ -148,7 +148,7 @@ registry.register('compteur', ({ element, params, api }) => {
 ```
 
 - **React** : `registry.register('graphique', reactPanel(MonGraphique))` — le composant reçoit `{ id, params, api, containerApi }`.
-- **Web Components** : `registry.register('carte', elementPanel('ma-carte'))` — les paramètres deviennent des propriétés de l'élément.
+- **Web Components** : `registry.register('carte', elementPanel('ma-carte', { allow: ['ville', 'zoom'] }))` — les paramètres autorisés deviennent des propriétés de l'élément. Sans `allow`, une liste d'exclusion écarte `innerHTML`, `on*`, `src`, `href`, etc. ; préférez `allow`, les paramètres venant du réseau.
 - **Intégrés**, utilisables sans livrer de code à l'appareil : `ms:text`, `ms:image`, `ms:iframe` (bac à sable par défaut), `ms:clock`, `ms:color`.
 - Un composant inconnu affiche un message explicite (personnalisable avec `registry.setFallback`).
 
@@ -269,7 +269,7 @@ display: {
 
 ## Sécurité
 
-Les écrans arrivent du réseau : ils sont **validés** (`validateScreen`) avant d'être stockés, et les panneaux intégrés n'insèrent jamais de HTML (texte et attributs uniquement ; `ms:iframe` est en bac à sable et n'accepte que `http(s)`). Le JSON Merge Patch ignore `__proto__`. Les liens de partage sont placés dans le fragment de l'URL, qui n'est pas envoyé au serveur. Pour un déploiement réseau, utilisez `wss://`, une salle par site, et un contrôle d'accès dans `createRelay({ authorize })` et `createScreenDevice({ accept })`.
+Les écrans arrivent du réseau : ils sont **validés** (`validateScreen`, motifs de route compris) avant d'être stockés, et les panneaux intégrés n'insèrent jamais de HTML (texte et attributs uniquement ; `ms:iframe` est en bac à sable et n'accepte que `http(s)`). Le JSON Merge Patch ignore `__proto__`. Un lien de partage est limité à 1 Mo une fois décompressé (`decodeScreen(lien, { maxBytes })`). Une URL mal encodée (`%ZZ`) ne fait pas planter le routeur. Une disposition invalide laisse une vue vide et cohérente, et l'erreur est remise à `onError` de l'outlet. Les liens de partage sont placés dans le fragment de l'URL, qui n'est pas envoyé au serveur. Pour un déploiement réseau, utilisez `wss://`, une salle par site, et un contrôle d'accès dans `createRelay({ authorize })` et `createScreenDevice({ accept })`.
 
 ## Développement
 

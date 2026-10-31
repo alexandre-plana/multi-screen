@@ -40,6 +40,11 @@ export class ScreenStore {
   readonly #events = new Emitter<ScreenStoreEvent>();
   readonly #storage: ScreenStorage | undefined;
   readonly #now: () => Date;
+  /** Ids written or removed before the storage finished loading: they win. */
+  readonly #touched = new Set<string>();
+  #loaded = false;
+  /** Error raised by `storage.load()`, if any (the store then starts empty). */
+  loadError: unknown;
   /** Resolves once the storage has been loaded. */
   readonly ready: Promise<void>;
 
@@ -51,17 +56,28 @@ export class ScreenStore {
   }
 
   async #load(): Promise<void> {
-    if (!this.#storage) return;
-    const stored = await this.#storage.load();
+    if (!this.#storage) {
+      this.#loaded = true;
+      return;
+    }
+    let stored: ScreenDefinition[] | undefined;
+    try {
+      stored = await this.#storage.load();
+    } catch (error) {
+      this.loadError = error;
+    }
+    this.#loaded = true;
     if (!stored) return;
     for (const raw of stored) {
       try {
         const screen = validateScreen(raw);
+        if (this.#touched.has(screen.id)) continue;
         this.#screens.set(screen.id, screen);
       } catch {
         // Ignore corrupted entries rather than refusing to start.
       }
     }
+    if (this.#touched.size) this.#persist();
     this.#events.emit({ type: 'reset', screens: this.list() });
   }
 
@@ -71,7 +87,8 @@ export class ScreenStore {
   }
 
   #persist(): void {
-    if (!this.#storage) return;
+    // Saving before the load completes would erase the stored screens.
+    if (!this.#storage || !this.#loaded) return;
     void Promise.resolve(this.#storage.save(this.list())).catch(() => undefined);
   }
 
@@ -101,6 +118,7 @@ export class ScreenStore {
       return structuredClone(previous);
     }
     const stored = this.#stamp(screen, previous, mode);
+    this.#touched.add(stored.id);
     this.#screens.set(stored.id, stored);
     this.#persist();
     this.#events.emit({ type: 'put', screen: structuredClone(stored), ...(previous ? { previous: structuredClone(previous) } : {}) });
@@ -119,6 +137,7 @@ export class ScreenStore {
   remove(id: string): boolean {
     const screen = this.#screens.get(id);
     if (!screen) return false;
+    this.#touched.add(id);
     this.#screens.delete(id);
     this.#persist();
     this.#events.emit({ type: 'remove', screen: structuredClone(screen) });

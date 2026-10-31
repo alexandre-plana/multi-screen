@@ -112,10 +112,24 @@ export function registerBuiltinPanels(registry: PanelRegistry): PanelRegistry {
  * every update. Works with Lit, Stencil, Vue (`defineCustomElement`),
  * Svelte (`customElement: true`), Angular Elements…
  */
+/** Properties that would turn data into markup or script. */
+const UNSAFE_PROPERTY = /^(on.*|innerHTML|outerHTML|srcdoc|style|src|href|action|formAction|xlink:href|attributeStyleMap|shadowRoot|__proto__|constructor|prototype)$/i;
+
 export function elementPanel<P extends Record<string, unknown> = Record<string, unknown>>(
   tagName: string,
-  options: { attributes?: boolean } = {},
+  options: {
+    /** Also reflect primitive params as attributes. */
+    attributes?: boolean;
+    /**
+     * Params allowed onto the element. Strongly recommended: screens come
+     * from the network, so restrict them to the properties your element
+     * declares. Without it, a deny-list blocks HTML sinks and event handlers.
+     */
+    allow?: string[];
+  } = {},
 ): PanelFactory<P> {
+  const allowed = options.allow && new Set(options.allow);
+  const isSafe = (key: string) => (allowed ? allowed.has(key) : !UNSAFE_PROPERTY.test(key));
   return ({ element, params, id, api }) => {
     const el = document.createElement(tagName) as HTMLElement & Record<string, unknown>;
     el.style.display = 'block';
@@ -124,12 +138,19 @@ export function elementPanel<P extends Record<string, unknown> = Record<string, 
     el.dataset.panelId = id;
     let previous: Record<string, unknown> = {};
     const apply = (p: P) => {
+      const safe = Object.entries(p).filter(([key]) => isSafe(key));
       for (const key of Object.keys(previous)) if (!(key in p)) el[key] = undefined;
-      for (const [key, value] of Object.entries(p)) {
+      for (const [key, value] of safe) {
         el[key] = value;
-        if (options.attributes && (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean')) el.setAttribute(key, String(value));
+        if (
+          options.attributes &&
+          (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') &&
+          !(typeof value === 'string' && /^\s*javascript:/i.test(value))
+        ) {
+          el.setAttribute(key, String(value));
+        }
       }
-      previous = { ...p };
+      previous = Object.fromEntries(safe);
     };
     el.panelApi = api;
     apply(params);

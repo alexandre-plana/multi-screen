@@ -23,6 +23,11 @@ export interface WebSocketTransportOptions {
   maxDelayMs?: number;
   /** Max messages buffered while disconnected. Default 500. */
   maxQueue?: number;
+  /**
+   * Buffered messages older than this are dropped on reconnect, so that a
+   * command the sender already gave up on is not executed much later. Default 10 s.
+   */
+  maxQueueAgeMs?: number;
   /** Connection status changes. */
   onStatus?: (status: 'connecting' | 'open' | 'closed') => void;
 }
@@ -37,7 +42,8 @@ export function webSocketTransport(options: WebSocketTransportOptions): WebSocke
   const Ctor = options.WebSocket ?? (globalThis as unknown as { WebSocket?: WebSocketTransportOptions['WebSocket'] }).WebSocket;
   if (!Ctor) throw new Error('No WebSocket implementation available: pass options.WebSocket');
   const listeners = new Set<(message: AnyEnvelope) => void>();
-  const queue: string[] = [];
+  const queue: { data: string; at: number }[] = [];
+  const maxAge = options.maxQueueAgeMs ?? 10_000;
   const maxQueue = options.maxQueue ?? 500;
   let socket: WebSocketLike | undefined;
   let status: WebSocketTransport['status'] = 'connecting';
@@ -54,13 +60,25 @@ export function webSocketTransport(options: WebSocketTransportOptions): WebSocke
   const connect = () => {
     if (closed) return;
     setStatus('connecting');
-    const url = typeof options.url === 'function' ? options.url() : options.url;
-    const ws = new Ctor(url, options.protocols);
+    let ws: WebSocketLike;
+    try {
+      const url = typeof options.url === 'function' ? options.url() : options.url;
+      ws = new Ctor(url, options.protocols);
+    } catch {
+      // Bad URL or constructor failure: keep retrying rather than stopping for good.
+      setStatus('closed');
+      scheduleReconnect();
+      return;
+    }
     socket = ws;
     ws.onopen = () => {
       attempt = 0;
       setStatus('open');
-      while (queue.length && ws.readyState === 1) ws.send(queue.shift()!);
+      const now = Date.now();
+      while (queue.length && ws.readyState === 1) {
+        const item = queue.shift()!;
+        if (now - item.at <= maxAge) ws.send(item.data);
+      }
     };
     ws.onmessage = (event) => {
       if (typeof event.data !== 'string') return;
@@ -78,11 +96,14 @@ export function webSocketTransport(options: WebSocketTransportOptions): WebSocke
       if (socket !== ws) return;
       socket = undefined;
       setStatus('closed');
-      if (closed || options.reconnect === false) return;
-      const min = options.minDelayMs ?? 500;
-      const delay = Math.min(options.maxDelayMs ?? 15_000, min * 2 ** attempt++) * (0.75 + Math.random() * 0.5);
-      timer = setTimeout(connect, delay);
+      scheduleReconnect();
     };
+  };
+  const scheduleReconnect = () => {
+    if (closed || options.reconnect === false) return;
+    const min = options.minDelayMs ?? 500;
+    const delay = Math.min(options.maxDelayMs ?? 15_000, min * 2 ** attempt++) * (0.75 + Math.random() * 0.5);
+    timer = setTimeout(connect, delay);
   };
   connect();
 
@@ -94,7 +115,7 @@ export function webSocketTransport(options: WebSocketTransportOptions): WebSocke
       const data = JSON.stringify(message);
       if (socket && socket.readyState === 1) socket.send(data);
       else {
-        queue.push(data);
+        queue.push({ data, at: Date.now() });
         if (queue.length > maxQueue) queue.shift();
       }
     },

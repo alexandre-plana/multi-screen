@@ -20,14 +20,16 @@ export async function encodeScreen(screen: ScreenDefinition, options: { compress
 }
 
 /** Decodes and validates a string produced by {@link encodeScreen}. */
-export async function decodeScreen(encoded: string): Promise<ScreenDefinition> {
+export async function decodeScreen(encoded: string, options: { maxBytes?: number } = {}): Promise<ScreenDefinition> {
+  const maxBytes = options.maxBytes ?? 1024 * 1024;
+  if (encoded.length > maxBytes * 2) throw new ValidationError('share link too large');
   const [prefix, data] = [encoded.slice(0, 2), encoded.slice(2)];
   let bytes: Uint8Array;
   try {
     bytes = fromBase64Url(data);
     if (prefix === 'z.') {
       if (typeof DecompressionStream === 'undefined') throw new ValidationError('compressed links need DecompressionStream');
-      bytes = await transform(bytes, new DecompressionStream('deflate-raw'));
+      bytes = await transform(bytes, new DecompressionStream('deflate-raw'), maxBytes);
     } else if (prefix !== 'j.') {
       throw new ValidationError('unknown share format');
     }
@@ -51,15 +53,26 @@ export async function createShareUrl(
   return new URL(path, options.baseUrl).toString();
 }
 
-async function transform(bytes: Uint8Array, stream: { writable: WritableStream<BufferSource>; readable: ReadableStream<Uint8Array> }): Promise<Uint8Array> {
+async function transform(
+  bytes: Uint8Array,
+  stream: { writable: WritableStream<BufferSource>; readable: ReadableStream<Uint8Array> },
+  maxBytes = Infinity,
+): Promise<Uint8Array> {
   const writer = stream.writable.getWriter();
-  void writer.write(bytes as Uint8Array<ArrayBuffer>);
-  void writer.close();
+  // Errors surface through the reader; observe these promises so they are never unhandled.
+  writer.write(bytes as Uint8Array<ArrayBuffer>).catch(() => undefined);
+  writer.close().catch(() => undefined);
   const chunks: Uint8Array[] = [];
+  let total = 0;
   const reader = stream.readable.getReader();
   for (;;) {
     const { done, value } = await reader.read();
     if (done) break;
+    total += value.length;
+    if (total > maxBytes) {
+      await reader.cancel().catch(() => undefined);
+      throw new ValidationError('share link expands beyond the size limit');
+    }
     chunks.push(value);
   }
   const out = new Uint8Array(chunks.reduce((n, c) => n + c.length, 0));

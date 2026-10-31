@@ -45,6 +45,8 @@ interface Connection extends RelayConnection {
 
 export function createRelay(options: RelayOptions = {}): Relay {
   const rooms = new Map<string, Set<Connection>>();
+  /** Latest connection of each peer id, per room. */
+  const owners = new Map<string, Map<string, Connection>>();
   const maxBytes = options.maxMessageBytes ?? 1024 * 1024;
   const routing = options.route !== false;
 
@@ -73,13 +75,19 @@ export function createRelay(options: RelayOptions = {}): Relay {
           }
           if (typeof message !== 'object' || message === null || message.ms !== 1 || typeof message.from !== 'string') return;
           // A peer cannot impersonate another one once identified.
-          if (conn.peerId === undefined) conn.peerId = message.from;
-          else if (message.from !== conn.peerId) return;
+          if (conn.peerId !== undefined && message.from !== conn.peerId) return;
+          // Identity and tags are only bound once a message has been authorised.
+          if (options.authorize && !options.authorize(message, conn)) return;
+          if (conn.peerId === undefined) {
+            conn.peerId = message.from;
+            const roomOwners = owners.get(room) ?? new Map<string, Connection>();
+            owners.set(room, roomOwners);
+            roomOwners.set(message.from, conn);
+          }
           if (message.type === 'device/hello') {
             const device = (message.payload as { device?: { tags?: unknown } } | undefined)?.device;
             conn.tags = Array.isArray(device?.tags) ? device.tags.filter((t): t is string => typeof t === 'string') : [];
           }
-          if (options.authorize && !options.authorize(message, conn)) return;
           for (const other of members) {
             if (other === conn || !targets(message.to, other)) continue;
             try {
@@ -92,8 +100,13 @@ export function createRelay(options: RelayOptions = {}): Relay {
         close() {
           members.delete(conn);
           if (members.size === 0) rooms.delete(room);
-          // Tell the room the device is gone, as it could not say it itself.
-          if (conn.peerId) {
+          const roomOwners = owners.get(room);
+          const latest = conn.peerId !== undefined && roomOwners?.get(conn.peerId) === conn;
+          if (latest) roomOwners!.delete(conn.peerId!);
+          if (roomOwners?.size === 0) owners.delete(room);
+          // Tell the room the device is gone, as it could not say it itself —
+          // unless the same peer has already reconnected on another socket.
+          if (latest) {
             const bye = JSON.stringify({ ms: 1, id: `bye-${conn.peerId}-${Date.now()}`, type: 'device/bye', from: conn.peerId, ts: Date.now(), payload: {} });
             for (const other of members) {
               try {
@@ -114,6 +127,7 @@ export function createRelay(options: RelayOptions = {}): Relay {
     close() {
       for (const members of rooms.values()) for (const conn of members) conn.peer.close?.(1001, 'relay closed');
       rooms.clear();
+      owners.clear();
     },
   };
 }

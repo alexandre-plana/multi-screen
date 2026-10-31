@@ -84,6 +84,8 @@ interface CompiledRoute {
   matcher: MatchFunction<ParamData>;
   order: number;
   dynamic: number;
+  /** Catch-all routes are tried after every other route of the same priority. */
+  splat: boolean;
 }
 
 export interface ScreenRouterOptions {
@@ -147,9 +149,10 @@ export class ScreenRouter {
     const existing = this.#routes.get(record.id);
     this.#routes.set(record.id, {
       record,
-      matcher: match(record.path, { decode: decodeURIComponent }),
+      matcher: match(record.path, { decode: safeDecode }),
       order: existing?.order ?? this.#counter++,
       dynamic: (record.path.match(/[:*]/g) ?? []).length,
+      splat: record.path.includes('*'),
     });
     this.#changed();
     return () => {
@@ -166,9 +169,10 @@ export class ScreenRouter {
       const record: RouteRecord = { ...definition, id: definition.id ?? definition.path };
       this.#routes.set(record.id, {
         record,
-        matcher: match(record.path, { decode: decodeURIComponent }),
+        matcher: match(record.path, { decode: safeDecode }),
         order: this.#routes.get(record.id)?.order ?? this.#counter++,
         dynamic: (record.path.match(/[:*]/g) ?? []).length,
+      splat: record.path.includes('*'),
       });
     }
     this.#changed();
@@ -197,7 +201,7 @@ export class ScreenRouter {
 
   #sorted(): CompiledRoute[] {
     return [...this.#routes.values()].sort(
-      (a, b) => (b.record.priority ?? 0) - (a.record.priority ?? 0) || a.dynamic - b.dynamic || a.order - b.order,
+      (a, b) => (b.record.priority ?? 0) - (a.record.priority ?? 0) || Number(a.splat) - Number(b.splat) || a.dynamic - b.dynamic || a.order - b.order,
     );
   }
 
@@ -269,6 +273,15 @@ export class ScreenRouter {
 
 export function createScreenRouter(options?: ScreenRouterOptions): ScreenRouter {
   return new ScreenRouter(options);
+}
+
+/** Malformed percent-encoding (`%ZZ`) is kept as is instead of throwing. */
+function safeDecode(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
 }
 
 function parsePath(path: string): RouterLocation {

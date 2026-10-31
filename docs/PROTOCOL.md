@@ -47,7 +47,13 @@ Destinataires : un id d'appareil, `tag:<étiquette>`, ou `*`. Une liste vaut l'u
 }
 ```
 
-`hash` est l'empreinte FNV-1a 32 bits (base 36) du JSON canonique (clés triées, `version` et `updatedAt` exclus) de l'écran. Il est facultatif ; sans lui, la régie se fie à la version.
+`hash` est l'empreinte de l'écran, `version` et `updatedAt` exclus. Elle est définie précisément pour pouvoir être recalculée dans un autre langage :
+
+1. JSON canonique : clés d'objet triées par ordre des unités de code, valeurs `undefined` omises, aucun espace, chaînes et nombres sérialisés comme le fait `JSON.stringify` en JavaScript (nombres au format le plus court, `\uXXXX` seulement pour les caractères de contrôle).
+2. FNV-1a 32 bits appliqué aux **unités de code UTF-16** de ce texte (et non à ses octets UTF-8) : `h = 0x811c9dc5 ; pour chaque unité u : h = (h XOR u) × 0x01000193 mod 2³²`.
+3. Résultat en base 36, minuscules.
+
+Le champ est facultatif ; sans lui, la régie se fie à la version. Une implémentation qui calcule une empreinte différente reste correcte, elle reçoit simplement l'écran complet au lieu d'un patch.
 
 ## Règles
 
@@ -55,7 +61,10 @@ Destinataires : un id d'appareil, `tag:<étiquette>`, ou `*`. Une liste vaut l'u
 - Toute donnée reçue est validée (`validateScreen`, `validateTheme`, `validateDisplay`) ; un échec produit un `ack` `ok: false` avec le message d'erreur.
 - Une commande refusée par `accept` ou `deny` produit `ack` `{ ok: false, error: "refused" }`.
 - Une régie considère un appareil hors ligne après `staleAfterMs` (45 s par défaut) sans message.
-- Le relais refuse qu'une connexion change d'identité (`from`) après son premier message.
+- Une régie ne compte que les accusés des appareils ciblés et en ligne, un seul par appareil. Sans `signedTransport`, n'importe quel pair du canal peut émettre un accusé au nom d'un autre : la signature est la seule garantie d'authenticité.
+- Un champ `to` qui n'est ni une chaîne ni une liste de chaînes rend le message invalide ; il est ignoré.
+- Le transport WebSocket abandonne, à la reconnexion, les messages en attente depuis plus de `maxQueueAgeMs` (10 s par défaut), pour ne pas exécuter tard une commande que l'émetteur a déjà considérée comme perdue.
+- Le relais lie l'identité d'une connexion (`from`, étiquettes) à son premier message **autorisé**, puis refuse qu'elle en change. Si un pair se reconnecte sur une nouvelle connexion, la fermeture de l'ancienne n'émet pas de `device/bye`.
 
 ## Évolution
 

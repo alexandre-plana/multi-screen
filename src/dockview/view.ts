@@ -44,13 +44,17 @@ export class ScreenView {
   #themeOverride: ThemeSpec | undefined;
   #displayOverride: DisplaySpec | undefined;
   #display: DisplaySpec = {};
-  #applying = false;
+  /** Pending programmatic changes whose (asynchronous) layout events must not be reported. */
+  #muted = 0;
   #resize: ResizeObserver | undefined;
   #wakeLock: { release(): Promise<void> } | undefined;
+  #wakeWanted = false;
+  #wakeRequest: Promise<void> | undefined;
+  #disposed = false;
   #emptyEl: HTMLElement | undefined;
   #disposables: { dispose(): void }[] = [];
   #onVisibility = () => {
-    if (document.visibilityState === 'visible' && this.#display.wakeLock) void this.#acquireWakeLock();
+    if (document.visibilityState === 'visible' && this.#wakeWanted) void this.#acquireWakeLock();
   };
 
   constructor(host: HTMLElement, options: ScreenViewOptions) {
@@ -80,7 +84,7 @@ export class ScreenView {
     });
     this.#disposables.push(
       this.api.onDidLayoutChange(() => {
-        if (this.#applying || !this.#screen) return;
+        if (this.#muted > 0 || !this.#screen) return;
         options.onLayoutChange?.(this.toJSON(), this);
       }),
     );
@@ -104,9 +108,9 @@ export class ScreenView {
 
   /** Shows a screen, or updates the one shown. `undefined` clears the view. */
   render(screen: ScreenDefinition | undefined): void {
-    this.#applying = true;
+    this.#mute();
+    const structure = screen ? structureKey(screen) : undefined;
     try {
-      const structure = screen ? structureKey(screen) : undefined;
       if (!screen) {
         this.api.clear();
       } else if (this.#screen?.id === screen.id && structure === this.#structure) {
@@ -114,14 +118,30 @@ export class ScreenView {
       } else {
         this.#build(screen);
       }
-      this.#screen = screen && structuredClone(screen);
-      this.#structure = structure;
-      this.#toggleEmpty(!screen);
-      this.#applyTheme();
-      this.#applyDisplay();
-    } finally {
-      this.#applying = false;
+    } catch (error) {
+      // Leave a consistent, empty view: the next render rebuilds from scratch.
+      this.api.clear();
+      this.#screen = undefined;
+      this.#structure = undefined;
+      this.#toggleEmpty(true);
+      throw error;
     }
+    this.#screen = screen && structuredClone(screen);
+    this.#structure = structure;
+    this.#toggleEmpty(!screen);
+    this.#applyTheme();
+    this.#applyDisplay();
+  }
+
+  /**
+   * dockview reports layout changes asynchronously (microtask): ignore those
+   * caused by our own render/layout until the next macrotask.
+   */
+  #mute(): void {
+    this.#muted++;
+    setTimeout(() => {
+      this.#muted--;
+    }, 0);
   }
 
   setTheme(theme: ThemeSpec | undefined): void {
@@ -136,6 +156,7 @@ export class ScreenView {
 
   /** Recomputes the stage geometry (called on resize). */
   layout(): void {
+    this.#mute();
     const width = this.root.clientWidth;
     const height = this.root.clientHeight;
     const geometry = computeStage({ width, height }, this.#display);
@@ -158,6 +179,7 @@ export class ScreenView {
   }
 
   dispose(): void {
+    this.#disposed = true;
     this.#resize?.disconnect();
     this.#host.ownerDocument.removeEventListener('visibilitychange', this.#onVisibility);
     void this.#releaseWakeLock();
@@ -232,7 +254,8 @@ export class ScreenView {
     this.layout();
     if (previous.fullscreen !== display.fullscreen) void this.#applyFullscreen(display.fullscreen === true);
     if (previous.wakeLock !== display.wakeLock) {
-      if (display.wakeLock) void this.#acquireWakeLock();
+      this.#wakeWanted = display.wakeLock === true;
+      if (this.#wakeWanted) void this.#acquireWakeLock();
       else void this.#releaseWakeLock();
     }
   }
@@ -250,20 +273,32 @@ export class ScreenView {
     }
   }
 
-  async #acquireWakeLock(): Promise<void> {
+  #acquireWakeLock(): Promise<void> {
     const nav = globalThis.navigator as Navigator & { wakeLock?: { request(type: 'screen'): Promise<{ release(): Promise<void> }> } };
-    if (!nav?.wakeLock || this.#wakeLock) return;
-    try {
-      this.#wakeLock = await nav.wakeLock.request('screen');
-      (this.#wakeLock as unknown as EventTarget).addEventListener?.('release', () => {
-        this.#wakeLock = undefined;
-      });
-    } catch (error) {
-      this.#options.onDisplayError?.('wakeLock', error);
-    }
+    if (!nav?.wakeLock || this.#wakeLock || this.#wakeRequest) return this.#wakeRequest ?? Promise.resolve();
+    this.#wakeRequest = (async () => {
+      try {
+        const lock = await nav.wakeLock!.request('screen');
+        // Released or disposed while the request was pending: give it back.
+        if (!this.#wakeWanted || this.#disposed) {
+          await lock.release().catch(() => undefined);
+          return;
+        }
+        this.#wakeLock = lock;
+        (lock as unknown as EventTarget).addEventListener?.('release', () => {
+          if (this.#wakeLock === lock) this.#wakeLock = undefined;
+        });
+      } catch (error) {
+        this.#options.onDisplayError?.('wakeLock', error);
+      } finally {
+        this.#wakeRequest = undefined;
+      }
+    })();
+    return this.#wakeRequest;
   }
 
   async #releaseWakeLock(): Promise<void> {
+    this.#wakeWanted = false;
     const lock = this.#wakeLock;
     this.#wakeLock = undefined;
     await lock?.release().catch(() => undefined);

@@ -105,7 +105,12 @@ export class ScreenHub {
 
   /** Sends a screen (object or id of a screen of the hub store) and shows it. */
   show(target: Target, screen: ScreenDefinition | string, options: { navigate?: boolean; params?: Record<string, string> } = {}): Promise<CommandResult> {
-    const definition = typeof screen === 'string' ? this.store.get(screen) : validateScreen(screen);
+    let definition: ScreenDefinition | undefined;
+    try {
+      definition = typeof screen === 'string' ? this.store.get(screen) : validateScreen(screen);
+    } catch (error) {
+      return Promise.reject(error);
+    }
     if (!definition) return Promise.reject(new Error(`Unknown screen "${String(screen)}"`));
     return this.send(target, 'screen/show', { screen: definition, navigate: options.navigate !== false, ...(options.params ? { params: options.params } : {}) });
   }
@@ -196,7 +201,7 @@ export class ScreenHub {
       const pending: Pending = { expected, acks: [], resolve: finish, messageId: message.id, timer: setTimeout(finish, this.#options.ackTimeoutMs ?? 5000) };
       this.#pending.set(message.id, pending);
       this.#transport.send(message);
-      if (expected.size === 0 && !(typeof target === 'string' && target === '*')) {
+      if (expected.size === 0) {
         // Nobody known matches: do not wait for nothing.
         queueMicrotask(finish);
       }
@@ -242,7 +247,8 @@ export class ScreenHub {
       const pending = this.#pending.get(ref);
       const ack: Ack = { deviceId: message.from, ok: ok === true, ...(error ? { error: String(error) } : {}) };
       this.#events.emit({ type: 'ack', ack, ref });
-      if (!pending) return;
+      // Only the devices the command was meant for count, once each.
+      if (!pending || !pending.expected.has(ack.deviceId) || pending.acks.some((a) => a.deviceId === ack.deviceId)) return;
       pending.acks.push(ack);
       if ([...pending.expected].every((id) => pending.acks.some((a) => a.deviceId === id)) && pending.expected.size > 0) pending.resolve({} as CommandResult);
     }

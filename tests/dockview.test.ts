@@ -143,6 +143,12 @@ describe('ScreenView', () => {
     const onLayoutChange = vi.fn();
     const view = mountScreen(makeHost(), { registry, screen, onLayoutChange });
     views.push(view);
+    const tick = () => new Promise((r) => setTimeout(r, 20));
+    await tick();
+    // Programmatic renders (here a params-only update) are not user changes.
+    view.render({ ...screen, panels: [{ ...screen.panels![0]!, params: { value: 99 } }, screen.panels![1]!] });
+    view.layout();
+    await tick();
     expect(onLayoutChange).not.toHaveBeenCalled();
     view.api.getPanel('b')!.api.close();
     await new Promise((r) => setTimeout(r, 50));
@@ -194,5 +200,42 @@ describe('outlet', () => {
     expect(outlet.view.root.classList.contains('ms-hide-tabs')).toBe(true);
     await hub.identify('wall', 50);
     expect(host.querySelector('.ms-identify')?.textContent).toBe('Wall 1');
+  });
+});
+
+describe('review regressions (dockview)', () => {
+  it('elementPanel never assigns HTML sinks or event handlers from params', async () => {
+    const { elementPanel } = await import('multi-screen/dockview');
+    customElements.define('ms-test-widget', class extends HTMLElement {});
+    const registry = createPanelRegistry({ w: elementPanel('ms-test-widget', { attributes: true }), strict: elementPanel('ms-test-widget', { allow: ['label'] }) });
+    const view = mountScreen(makeHost(), {
+      registry,
+      screen: {
+        id: 's',
+        panels: [
+          { id: 'a', component: 'w', params: { innerHTML: '<img src=x onerror=alert(1)>', onclick: 'alert(1)', href: 'javascript:alert(1)', label: 'ok' } },
+          { id: 'b', component: 'strict', params: { label: 'yes', title: 'no' } },
+        ],
+      },
+    });
+    views.push(view);
+    const [a, b] = [...host.querySelectorAll('ms-test-widget')] as (HTMLElement & { label?: string })[];
+    expect(a!.querySelector('img')).toBeNull();
+    expect(a!.getAttribute('onclick')).toBeNull();
+    expect(a!.getAttribute('href')).toBeNull();
+    expect(a!.label).toBe('ok');
+    expect(b!.label).toBe('yes');
+    expect(b!.title).toBe('');
+  });
+
+  it('a failed render leaves a consistent view that recovers', () => {
+    const { registry } = counterRegistry();
+    const view = mountScreen(makeHost(), { registry, screen });
+    views.push(view);
+    const broken = { id: 'ops', layout: { grid: { root: 'nonsense', width: 1, height: 1, orientation: 'HORIZONTAL' }, panels: {} } } as ScreenDefinition;
+    expect(() => view.render(broken)).toThrow();
+    expect(view.screen).toBeUndefined();
+    view.render(screen);
+    expect(view.api.panels).toHaveLength(2);
   });
 });

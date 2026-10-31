@@ -1,3 +1,4 @@
+import { match } from 'path-to-regexp';
 import { ValidationError } from './errors.js';
 import type { DeviceInfo, DisplaySpec, PanelSpec, ScreenDefinition, ThemeSpec } from './types.js';
 
@@ -109,6 +110,13 @@ export function validateScreen(input: unknown, path = 'screen'): ScreenDefinitio
   optionalNumber(screen.version, `${path}.version`, 0);
   if (screen.route !== undefined && (typeof screen.route !== 'string' || !screen.route.startsWith('/'))) {
     throw new ValidationError('expected a path starting with /', `${path}.route`);
+  }
+  if (screen.route !== undefined) {
+    try {
+      match(screen.route as string);
+    } catch (error) {
+      throw new ValidationError(`invalid route pattern (${(error as Error).message})`, `${path}.route`);
+    }
   }
   if (screen.panels !== undefined) {
     if (!Array.isArray(screen.panels)) throw new ValidationError('expected an array', `${path}.panels`);
