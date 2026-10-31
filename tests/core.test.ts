@@ -26,6 +26,14 @@ describe('merge patch', () => {
     expect(applyMergePatch(from, createMergePatch(from, to))).toEqual(to);
   });
 
+  it('does not delete keys that are undefined in the source', () => {
+    expect(createMergePatch({ a: undefined, b: 1 }, { a: undefined, b: 2 })).toEqual({ b: 2 });
+    expect(createMergePatch({ a: undefined, b: 1 }, { b: 1 })).toEqual({});
+    expect(createMergePatch({ a: undefined }, { a: 3 })).toEqual({ a: 3 });
+    expect(createMergePatch({ p: { x: undefined, v: 1 } }, { p: { v: 2 } })).toEqual({ p: { v: 2 } });
+    expect(createMergePatch({ a: 1 }, { a: undefined })).toEqual({ a: null });
+  });
+
   it('ignores prototype pollution keys', () => {
     const result = applyMergePatch({}, JSON.parse('{"__proto__":{"polluted":true}}'));
     expect(({} as Record<string, unknown>).polluted).toBeUndefined();

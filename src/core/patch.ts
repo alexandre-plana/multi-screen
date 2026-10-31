@@ -29,7 +29,8 @@ export function createMergePatch(from: unknown, to: unknown): unknown {
   if (!isPlainObject(from) || !isPlainObject(to)) return structuredClone(to);
   const patch: Record<string, unknown> = {};
   for (const key of Object.keys(from)) {
-    if (!(key in to) || to[key] === undefined) patch[key] = null;
+    // A key that is undefined in `from` has nothing to delete (dockview's toJSON emits many).
+    if (from[key] !== undefined && (!(key in to) || to[key] === undefined)) patch[key] = null;
   }
   for (const [key, value] of Object.entries(to)) {
     if (value === undefined) continue;
