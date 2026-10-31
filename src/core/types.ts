@@ -44,7 +44,7 @@ export interface PanelSpec {
 
 /**
  * A full dockview layout as produced by `DockviewApi.toJSON()`.
- * Typed structurally so the core does not depend on dockview-core.
+ * Typed structurally so the core does not depend on dockview.
  */
 export interface SerializedLayout {
   grid: { root: unknown; width: number; height: number; orientation: string };

@@ -1,0 +1,55 @@
+:root { color-scheme: light dark; --bg: #f6f7f9; --fg: #1b1f24; --muted: #5d6673; --card: #fff; --line: #d9dde3; --accent: #2f6fde; --ok: #1f8a4c; --ko: #c0392b; }
+@media (prefers-color-scheme: dark) { :root { --bg: #111418; --fg: #e8eaee; --muted: #9aa3ae; --card: #1a1e24; --line: #2c323b; --accent: #6a9cff; --ok: #4cc27f; --ko: #ff7a6b; } }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); font: 14px/1.45 system-ui, -apple-system, 'Segoe UI', sans-serif; }
+a { color: var(--accent); }
+button, select, input, textarea { font: inherit; color: inherit; }
+button { background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; cursor: pointer; }
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+button:disabled { opacity: .5; cursor: default; }
+select, input[type=text], input[type=number], textarea { background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Device page */
+.device { position: fixed; inset: 0; }
+
+/* Control page */
+.control { display: grid; grid-template-columns: 300px 1fr 320px; grid-template-rows: auto 1fr; height: 100%; }
+.control > header { grid-column: 1 / -1; display: flex; gap: 12px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.control > header h1 { font-size: 16px; margin: 0 8px 0 0; }
+.control > header .transport { color: var(--muted); font-size: 12px; }
+.control > header .spacer { flex: 1; }
+.col { overflow: auto; padding: 12px 16px; border-right: 1px solid var(--line); }
+.col:last-child { border-right: 0; }
+.col h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 8px 0; }
+.list { list-style: none; margin: 0 0 16px; padding: 0; display: grid; gap: 6px; }
+.item { border: 1px solid var(--line); background: var(--card); border-radius: 8px; padding: 8px 10px; display: grid; gap: 4px; }
+.item[aria-current=true] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.item .row { display: flex; gap: 6px; align-items: center; }
+.item .name { font-weight: 600; flex: 1; }
+.item .meta { color: var(--muted); font-size: 12px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ko); flex: none; }
+.dot.on { background: var(--ok); }
+.center { display: grid; grid-template-rows: auto 1fr auto; min-width: 0; }
+.toolbar { display: flex; gap: 8px; padding: 10px 16px; border-bottom: 1px solid var(--line); flex-wrap: wrap; align-items: center; }
+.preview { position: relative; margin: 12px 16px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; min-height: 240px; }
+.editor { padding: 0 16px 12px; }
+.editor textarea { width: 100%; height: 180px; font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.field { display: grid; grid-template-columns: 110px 1fr; gap: 8px; align-items: center; margin-bottom: 8px; }
+.status { min-height: 1.4em; color: var(--muted); font-size: 12px; }
+.status.err { color: var(--ko); }
+.hint { color: var(--muted); font-size: 12px; }
+.empty-note { color: var(--muted); font-size: 13px; padding: 8px 0; }
+@media (max-width: 1000px) { .control { grid-template-columns: 1fr; grid-template-rows: auto; height: auto; } .col { border-right: 0; border-bottom: 1px solid var(--line); } }
+
+/* Demo panels */
+.kpi { display: flex; flex-direction: column; justify-content: center; height: 100%; padding: 1em 1.5em; font-family: system-ui, sans-serif; }
+.kpi-label { opacity: .7; font-size: 1.1em; }
+.kpi-value { font-size: 2.8em; font-weight: 700; font-variant-numeric: tabular-nums; }
+.kpi-trend[data-dir=up] { color: #4cc27f; }
+.kpi-trend[data-dir=down] { color: #ff7a6b; }
+.bars { display: flex; flex-direction: column; height: 100%; padding: 1em; box-sizing: border-box; }
+.bars-title { opacity: .8; margin-bottom: .5em; font-family: system-ui, sans-serif; }
+.bars svg { flex: 1; width: 100%; }
+.bars rect { fill: var(--demo-accent, #6a9cff); }
+.field > select, .field > input { min-width: 0; width: 100%; }

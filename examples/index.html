@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>multi-screen · démo</title>
+    <link rel="stylesheet" href="./demo.css" />
+    <style>
+      main { max-width: 720px; margin: 0 auto; padding: 32px 16px; }
+      h1 { margin-top: 0; }
+      .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+      .cards a { display: block; padding: 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); text-decoration: none; color: inherit; }
+      .cards strong { display: block; color: var(--accent); margin-bottom: 4px; }
+      code { font-size: 12px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>multi-screen</h1>
+      <p>Composez des écrans à partir de panneaux dockview, créez leurs routes à l'exécution et envoyez-les à n'importe quel appareil.</p>
+      <div class="cards">
+        <a href="./control.html"><strong>Régie</strong>Découvrir les écrans, leur envoyer des compositions, changer leur thème et leur affichage.</a>
+        <a href="./device.html?name=Écran%20A&amp;id=ecran-a&amp;tags=hall" target="_blank"><strong>Écran A</strong>Un appareil d'affichage (étiquette <code>hall</code>).</a>
+        <a href="./device.html?name=Écran%20B&amp;id=ecran-b&amp;tags=bureau" target="_blank"><strong>Écran B</strong>Un second appareil (étiquette <code>bureau</code>).</a>
+      </div>
+      <p class="hint">Par défaut, les pages communiquent par BroadcastChannel (onglets du même navigateur). Pour piloter d'autres machines, lancez <code>npx multi-screen-relay</code> et ajoutez <code>?relay=ws://&lt;hôte&gt;:8787</code> à chaque adresse.</p>
+    </main>
+  </body>
+</html>

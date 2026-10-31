@@ -3,7 +3,7 @@ export const MULTI_SCREEN_CSS = `
 .ms-root{position:relative;overflow:hidden;width:100%;height:100%;contain:strict}
 .ms-stage{position:absolute;top:0;left:0;transform-origin:0 0}
 .ms-stage>.ms-dock{width:100%;height:100%}
-.ms-panel{width:100%;height:100%;overflow:auto;box-sizing:border-box}
+.ms-panel{width:100%;height:100%;overflow:auto;box-sizing:border-box;color:var(--ms-panel-color,var(--dv-color,var(--dv-activegroup-visiblepanel-tab-color,inherit)))}
 .ms-root.ms-hide-tabs .dv-tabs-and-actions-container{display:none!important}
 .ms-root.ms-no-cursor,.ms-root.ms-no-cursor *{cursor:none!important}
 .ms-missing{display:flex;align-items:center;justify-content:center;height:100%;padding:1em;font:14px system-ui,sans-serif;opacity:.7;text-align:center}

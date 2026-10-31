@@ -1,33 +1,20 @@
-import {
-  themeAbyss, themeAbyssSpaced, themeCatppuccinMocha, themeCatppuccinMochaSpaced, themeDark, themeDracula,
-  themeGithubDark, themeGithubDarkSpaced, themeGithubLight, themeGithubLightSpaced, themeLight, themeLightSpaced,
-  themeMonokai, themeNord, themeNordSpaced, themeSolarizedLight, themeSolarizedLightSpaced, themeVisualStudio,
-  type DockviewTheme,
-} from 'dockview-core';
+import * as dockview from 'dockview';
+import type { DockviewTheme } from 'dockview';
 import type { ThemeSpec } from '../core/types.js';
 
-const themes = new Map<string, DockviewTheme>(
-  Object.entries({
-    dark: themeDark,
-    light: themeLight,
-    lightSpaced: themeLightSpaced,
-    visualStudio: themeVisualStudio,
-    abyss: themeAbyss,
-    abyssSpaced: themeAbyssSpaced,
-    dracula: themeDracula,
-    nord: themeNord,
-    nordSpaced: themeNordSpaced,
-    catppuccinMocha: themeCatppuccinMocha,
-    catppuccinMochaSpaced: themeCatppuccinMochaSpaced,
-    monokai: themeMonokai,
-    solarizedLight: themeSolarizedLight,
-    solarizedLightSpaced: themeSolarizedLightSpaced,
-    githubDark: themeGithubDark,
-    githubDarkSpaced: themeGithubDarkSpaced,
-    githubLight: themeGithubLight,
-    githubLightSpaced: themeGithubLightSpaced,
-  }),
-);
+/**
+ * Every `themeXxx` exported by dockview is registered as `xxx` (camelCase):
+ * `dark`, `light`, `abyss`, `dracula`, `nord`, `githubDark`… New themes of
+ * future dockview versions are picked up automatically.
+ */
+const themes = new Map<string, DockviewTheme>();
+for (const [key, value] of Object.entries(dockview)) {
+  if (!key.startsWith('theme') || key.length <= 5) continue;
+  const theme = value as Partial<DockviewTheme> | undefined;
+  if (theme && typeof theme === 'object' && typeof theme.className === 'string') {
+    themes.set(key[5]!.toLowerCase() + key.slice(6), theme as DockviewTheme);
+  }
+}
 
 /** Registers (or replaces) a named dockview theme usable as `theme.base`. */
 export function registerTheme(name: string, theme: DockviewTheme): void {
@@ -44,7 +31,7 @@ export function themeNames(): string[] {
 
 /** Turns a portable {@link ThemeSpec} into the dockview theme object. */
 export function resolveTheme(spec: ThemeSpec | undefined, fallback = 'dark'): DockviewTheme {
-  const base = themes.get(spec?.base ?? fallback) ?? themes.get(fallback) ?? themeDark;
+  const base = themes.get(spec?.base ?? fallback) ?? themes.get(fallback) ?? themes.get('dark') ?? { name: 'dark', className: 'dockview-theme-dark' };
   return {
     ...base,
     ...(spec?.colorScheme ? { colorScheme: spec.colorScheme } : {}),

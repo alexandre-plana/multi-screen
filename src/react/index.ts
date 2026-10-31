@@ -1,6 +1,6 @@
 import { createElement, useEffect, useRef, useSyncExternalStore, type ComponentType, type CSSProperties } from 'react';
 import { createRoot } from 'react-dom/client';
-import type { DockviewApi, DockviewPanelApi } from 'dockview-core';
+import type { DockviewApi, DockviewPanelApi } from 'dockview';
 import type { DeviceRecord, ScreenHub } from '../core/hub.js';
 import type { RouteMatch, ScreenRouter } from '../core/router.js';
 import type { ScreenStore } from '../core/store.js';

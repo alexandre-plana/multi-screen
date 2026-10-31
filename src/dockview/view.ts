@@ -1,4 +1,4 @@
-import { createDockview, type AddPanelOptions, type DockviewApi, type DockviewOptions, type SerializedDockview } from 'dockview-core';
+import { createDockview, type AddPanelOptions, type DockviewApi, type DockviewOptions, type SerializedDockview } from 'dockview';
 import { computeStage, mergeDisplay, mergeTheme } from '../core/display.js';
 import { deepEqual } from '../core/patch.js';
 import type { DisplaySpec, PanelSpec, ScreenDefinition, SerializedLayout, ThemeSpec } from '../core/types.js';
@@ -240,7 +240,10 @@ export class ScreenView {
   async #applyFullscreen(on: boolean): Promise<void> {
     const doc = this.#host.ownerDocument;
     try {
-      if (on && !doc.fullscreenElement && this.#host.requestFullscreen) await this.#host.requestFullscreen();
+      if (on && !doc.fullscreenElement) {
+        if (typeof this.#host.requestFullscreen !== 'function') throw new Error('Fullscreen API unavailable');
+        await this.#host.requestFullscreen();
+      }
       else if (!on && doc.fullscreenElement === this.#host) await doc.exitFullscreen();
     } catch (error) {
       this.#options.onDisplayError?.('fullscreen', error);

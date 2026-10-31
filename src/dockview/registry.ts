@@ -1,4 +1,4 @@
-import type { DockviewApi, DockviewPanelApi, GroupPanelPartInitParameters, IContentRenderer, ITabRenderer, TabPartInitParameters } from 'dockview-core';
+import type { DockviewApi, DockviewPanelApi, GroupPanelPartInitParameters, IContentRenderer, ITabRenderer, TabPartInitParameters } from 'dockview';
 
 /** What a panel factory receives. */
 export interface PanelContext<P = Record<string, unknown>> {
